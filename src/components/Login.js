@@ -92,6 +92,7 @@ function LoginForm({
           htmlType="submit"
           className={cx(styles.inputButton, 'login-form-button')}
           disabled={isLoggingIn}
+          loading={isLoggingIn}
         >
           Log in
         </Button>

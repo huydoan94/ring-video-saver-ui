@@ -1,9 +1,16 @@
 import { get } from 'lodash';
+import axios from 'axios';
 
-import { electronImport } from '../utils/electron';
-import promiseFetchWithRetry from '../utils/promiseFetchWithRetry';
+import { API_VERSION } from '../constants';
+import getHardwareId from '../utils/getHardwareId';
 
-const axios = electronImport('axios');
+const saveAuthData = (data) => {
+  if (!data) localStorage.setItem('authData', null);
+  localStorage.setItem('authData', JSON.stringify({
+    accessToken: get(data, 'access_token'),
+    refreshToken: get(data, 'refresh_token'),
+  }));
+};
 
 export const login = (username, password) => {
   const reqBody = {
@@ -14,11 +21,73 @@ export const login = (username, password) => {
     client_id: 'ring_official_android',
   };
 
-  return promiseFetchWithRetry(axios, {
+  localStorage.setItem('authRequest', JSON.stringify({
+    username,
+    password,
+  }));
+
+  return axios({
     url: 'https://oauth.ring.com/oauth/token',
     method: 'POST',
     data: reqBody,
-  }).then(res => get(res, 'data')).catch((err) => {
+  }).then((res) => {
+    const data = get(res, 'data');
+    saveAuthData(data);
+    return data;
+  }).catch((err) => {
+    saveAuthData();
+    throw err;
+  });
+};
+
+export const loginUseToken = (refreshToken) => {
+  const reqBody = {
+    grant_type: 'refresh_token',
+    refresh_token: refreshToken,
+    scope: 'client',
+    client_id: 'ring_official_android',
+  };
+
+  return axios({
+    url: 'https://oauth.ring.com/oauth/token',
+    method: 'POST',
+    data: reqBody,
+  }).then((res) => {
+    const data = get(res, 'data');
+    saveAuthData(data);
+    return data;
+  }).catch((err) => {
+    saveAuthData();
+    throw err;
+  });
+};
+
+export const createSession = (accessToken) => {
+  const reqBody = {
+    device: {
+      hardware_id: getHardwareId(),
+      metadata: {
+        api_version: API_VERSION,
+      },
+      os: 'android',
+    },
+  };
+
+  return axios({
+    url: `https://api.ring.com/clients_api/session?api_version=${API_VERSION}`,
+    method: 'POST',
+    data: reqBody,
+    headers: {
+      'content-type': 'application/json',
+      'content-length': JSON.stringify(reqBody).length,
+      Authorization: `Bearer ${accessToken}`,
+    },
+  }).then((res) => {
+    const sessionToken = get(res, 'data.profile.authentication_token');
+    localStorage.setItem('sessionToken', sessionToken);
+    return sessionToken;
+  }).catch((err) => {
+    localStorage.setItem('sessionToken', null);
     throw err;
   });
 };

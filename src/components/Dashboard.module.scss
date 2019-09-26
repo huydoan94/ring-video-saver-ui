@@ -1,0 +1,21 @@
+.title {
+  height          : auto !important;
+  background-color: #1890ff;
+  margin-top      : 0 !important;
+  padding         : 22px 0 !important;
+  text-align      : center;
+
+  >h4 {
+    color        : white;
+    margin-bottom: 0;
+  }
+
+  i {
+    font-size: 1em !important;
+    margin-right: 8px;
+  }
+}
+
+.sider {
+  border-right:rgb(232, 232, 232) 1px solid;
+}

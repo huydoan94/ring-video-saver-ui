@@ -1,0 +1,55 @@
+.title {
+  padding         : 20px 0;
+  padding-left    : 18px;
+  background-color: rgb(24, 144, 255);
+
+  >h1 {
+    color        : #e6f7ff;
+    margin-bottom: 0;
+
+    i {
+      margin-right: 10px
+    }
+  }
+}
+
+.content {
+  background-color: #ffffff;
+  padding         : 12px;
+  font-size       : 18px;
+}
+
+.log {
+  background-color: #ffffff;
+  margin          : 12px 20px;
+  overflow        : auto;
+  height          : calc(100vh - 282px);
+  border          : rgb(232, 232, 232) 1px solid;
+  border-radius   : 5px;
+  padding         : 12px 20px;
+  font-size       : 16px;
+
+  &AlignCenter {
+    display        : flex;
+    align-items    : center;
+    justify-content: center;
+  }
+}
+
+.manualContainer,
+.jobContainer {
+  padding: 0 2px;
+}
+
+.manualContainer {
+  &Button {
+    width      : calc(100% - 8px);
+    margin-left: 8px;
+  }
+}
+
+.jobContainer {
+  &Button {
+    width: 100%;
+  }
+}

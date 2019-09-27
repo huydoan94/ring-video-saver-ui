@@ -223,8 +223,6 @@ export default class SaveHistoryJob {
         const refreshTimeout = () => {
           if (timeout !== undefined) clearTimeout(timeout);
           timeout = setTimeout(() => {
-            response.data.close();
-            response.data.unpipe(file);
             file.end();
             deleteFile();
             reject(new Error(`Timeout on ${videoStreamByteUrl}`));
@@ -237,8 +235,6 @@ export default class SaveHistoryJob {
           refreshTimeout();
           if (this.isCancelled) {
             clearTimeout(timeout);
-            response.data.close();
-            response.data.unpipe(file);
             file.end();
             deleteFile();
             reject(new Error('Cancelled'));

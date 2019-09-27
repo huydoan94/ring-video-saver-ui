@@ -192,11 +192,10 @@ export default class SaveHistoryJob {
     videoStreamByteUrl,
     dir, dirPath,
   }) {
+    const extension = videoStreamByteUrl.match(/\.[0-9a-z]+?(?=\?)/i)[0];
+    const fileName = `${moment(createdAt).format('YYYY-MM-DD_HH-mm-ss')}_${type}${extension}`;
+    const dest = path.join(dir, fileName);
     return cancellablePromise.run((resolve, reject) => {
-      const extension = videoStreamByteUrl.match(/\.[0-9a-z]+?(?=\?)/i)[0];
-      const fileName = `${moment(createdAt).format('YYYY-MM-DD_HH-mm-ss')}_${type}${extension}`;
-      const dest = path.join(dir, fileName);
-
       if (fs.existsSync(dest)) {
         this.logger(`${fileName} in ${dirPath} exist. Skipping ...`);
         resolve(2);
@@ -218,7 +217,7 @@ export default class SaveHistoryJob {
         const rejectFileSaving = (err) => {
           file.end();
           deleteFile();
-          throw err;
+          reject(err);
         };
 
         let timeout;
@@ -247,10 +246,10 @@ export default class SaveHistoryJob {
           clearTimeout(timeout);
           rejectFileSaving(err);
         });
-      }).catch((err) => {
-        this.logger(`Save file ${fileName} to ${dirPath} FAIL`);
-        reject(err);
-      });
+      }).catch(err => reject(err));
+    }).catch((err) => {
+      this.logger(`Save file ${fileName} to ${dirPath} FAIL`);
+      throw err;
     });
   }
 

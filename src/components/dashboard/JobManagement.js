@@ -150,13 +150,16 @@ export default function JobManagement() {
     setSelectedRange(range);
   };
 
-  const onScrollLog = (event) => {
-    (debounce((scrollHeight, clientHeight, scrollTop) => {
+  const onScrollLog = (() => {
+    const debouceScroll = debounce((scrollHeight, clientHeight, scrollTop) => {
       const shouldAutoScroll = scrollTop + clientHeight + 50 >= scrollHeight;
       if (shouldAutoScroll && !isAutoScroll) setIsAutoScroll(true);
       if (!shouldAutoScroll && isAutoScroll) setIsAutoScroll(false);
-    }, 500))(event.target.scrollHeight, event.target.clientHeight, event.target.scrollTop);
-  };
+    }, 500);
+    return (event) => {
+      debouceScroll(event.target.scrollHeight, event.target.clientHeight, event.target.scrollTop);
+    };
+  })();
 
   return (
     <React.Fragment>

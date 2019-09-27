@@ -9,7 +9,6 @@ import {
 } from 'lodash';
 import JSONBigInt from 'json-bigint';
 import autoBind from 'auto-bind';
-import libaxios from 'axios';
 
 import { API_VERSION } from './constants';
 import getHardwareId from './utils/getHardwareId';
@@ -22,6 +21,7 @@ import { login, loginUseToken, createSession } from './components/Login.services
 
 const fs = electronImport('fs');
 const path = electronImport('path');
+const libaxios = electronImport('axios');
 
 async function axios(...params) {
   return new Promise((resolve, reject) => {
@@ -212,18 +212,20 @@ export default class SaveHistoryJob {
       }).then((response) => {
         const file = fs.createWriteStream(dest, { flag: 'w' });
         const deleteFile = () => {
-          fs.unlink(dest, () => {
-            this.logger(`Deleted file ${fileName} in ${dirPath}`);
-          });
+          fs.unlink(dest, () => { });
+        };
+
+        const rejectFileSaving = (err) => {
+          file.end();
+          deleteFile();
+          throw err;
         };
 
         let timeout;
         const refreshTimeout = () => {
           if (timeout !== undefined) clearTimeout(timeout);
           timeout = setTimeout(() => {
-            file.end();
-            deleteFile();
-            reject(new Error(`Timeout on ${videoStreamByteUrl}`));
+            rejectFileSaving(new Error(`Timeout on ${videoStreamByteUrl}`));
           }, 10000);
         };
 
@@ -233,9 +235,7 @@ export default class SaveHistoryJob {
           refreshTimeout();
           if (this.isCancelled) {
             clearTimeout(timeout);
-            file.end();
-            deleteFile();
-            reject(new Error('Cancelled'));
+            rejectFileSaving(new Error('Cancelled'));
           }
         });
         response.data.on('end', () => {
@@ -245,10 +245,7 @@ export default class SaveHistoryJob {
         });
         response.data.on('error', (err) => {
           clearTimeout(timeout);
-          file.end();
-          deleteFile();
-          this.logger(`Save file ${fileName} to ${dirPath} FAIL`);
-          reject(err);
+          rejectFileSaving(err);
         });
       }).catch((err) => {
         this.logger(`Save file ${fileName} to ${dirPath} FAIL`);
@@ -373,24 +370,22 @@ export default class SaveHistoryJob {
       url: 'https://api.ring.com/clients_api/doorbots/history'
         + `?limit=${limit}${isNil(earliestEventId) ? '' : `&older_than=${earliestEventId}`}`,
       method: 'GET',
-      transformResponse: [(data) => {
-        let parsed;
-        try {
-          parsed = JSONBigInt.parse(data);
-        } catch (_) {
-          parsed = [];
-        }
-        return parsed;
-      }],
+      transformResponse: [],
     }).then((res) => {
-      const data = get(res, 'data', []);
-      if (remain === 0) {
-        return data;
+      let parsed;
+      const data = get(res, 'data', '[]');
+      try {
+        parsed = JSONBigInt.parse(data);
+      } catch (_) {
+        parsed = [];
       }
-      if (some(data, d => get(d, 'recording.status') !== 'ready')) {
+      if (remain === 0) {
+        return parsed;
+      }
+      if (some(parsed, d => get(d, 'recording.status') !== 'ready')) {
         return sleep(5000).then(() => this.getLimitHistory(earliestEventId, limit, remain - 1));
       }
-      return data;
+      return parsed;
     }).catch((err) => {
       throw err;
     });

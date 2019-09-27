@@ -212,10 +212,8 @@ export default class SaveHistoryJob {
       }).then((response) => {
         const file = fs.createWriteStream(dest, { flag: 'w' });
         const deleteFile = () => {
-          fs.unlink(dest, (err) => {
-            if (!err) {
-              this.logger(`Deleted file ${fileName} in ${dirPath}`);
-            }
+          fs.unlink(dest, () => {
+            this.logger(`Deleted file ${fileName} in ${dirPath}`);
           });
         };
 
@@ -530,7 +528,8 @@ export default class SaveHistoryJob {
         let processedEvents = [];
         let meta = this.readMeta();
         if (isEmpty(meta) || isEmpty(meta.lastestEventTime)) {
-          const { data: result } = await this.run(moment().startOf('day'));
+          const { data: result, status } = await this.run(moment().startOf('day'));
+          if (status !== statusMap.success) throw new Error('First run failed');
           processedEvents = result;
           meta = this.createMetaData(meta, result);
         } else {

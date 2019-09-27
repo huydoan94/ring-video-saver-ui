@@ -562,7 +562,7 @@ export default class SaveHistoryJob {
         this.logger(`Job run FAIL at ${moment().format('l LT')} --- ${e}`);
       }
 
-      await sleep(60000);
+      await cancellablePromise.wrap(sleep(60000));
       return cronJob();
     };
     return cronJob();

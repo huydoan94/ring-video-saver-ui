@@ -29,10 +29,11 @@ export default class CancellablePromise {
     callback(resolve, reject);
   })
 
-  cancel = () => {
+  cancel = () => new Promise((resolve) => {
     this.isCancelled = true;
     forEach(this.rejectChain, (rejectFunc) => {
       rejectFunc(new Error('Promise Cancelled'));
     });
-  }
+    resolve();
+  })
 }

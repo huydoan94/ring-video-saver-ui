@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Typography, Icon, Row, Col,
   DatePicker, Button, Empty,
 } from 'antd';
 import moment from 'moment';
-import { isEmpty, map } from 'lodash';
+import { isEmpty, map, debounce } from 'lodash';
 import cx from 'classnames';
 
 import VideoSaveRunner from '../../VideoSaveRunner';
@@ -36,12 +36,40 @@ export default function JobManagement() {
     autoStatus: statusMap.notRunning,
     autoRunTime: 0,
   });
+  const [isAutoScroll, setIsAutoScroll] = useState(true);
+  const logPanel = useRef(null);
 
   useEffect(() => () => {
     clearInterval(runTimeInterval);
     if (runner !== null) runner.cancel();
     runner = null;
   }, []);
+
+  useEffect(() => {
+    if (logPanel.current && isAutoScroll) {
+      logPanel.current.scrollTo({
+        behavior: 'smooth',
+        top: logPanel.current.scrollHeight,
+      });
+    }
+  }, [log, isAutoScroll]);
+
+  const updateLogWithBuffer = (() => {
+    let buffer = [];
+    let timeoutClearBuffer = null;
+    const applyTimeout = () => setTimeout(() => {
+      updateLog(oldLog => oldLog.concat(buffer));
+      timeoutClearBuffer = null;
+      buffer = [];
+    }, 1000);
+
+    return (mess) => {
+      buffer = buffer.concat(mess);
+      if (timeoutClearBuffer === null) {
+        timeoutClearBuffer = applyTimeout();
+      }
+    };
+  })();
 
   const startCountRunTime = () => {
     runTimeInterval = setInterval(() => {
@@ -50,7 +78,7 @@ export default function JobManagement() {
   };
 
   const writeLog = (message) => {
-    updateLog(oldLog => oldLog.concat(message));
+    updateLogWithBuffer(message);
   };
 
   const finishAutoJob = () => {
@@ -122,6 +150,13 @@ export default function JobManagement() {
     setSelectedRange(range);
   };
 
+  const onScrollLog = (event) => {
+    (debounce((scrollHeight, clientHeight, scrollTop) => {
+      const shouldAutoScroll = scrollTop + clientHeight + 50 >= scrollHeight;
+      if (shouldAutoScroll && !isAutoScroll) setIsAutoScroll(true);
+      if (!shouldAutoScroll && isAutoScroll) setIsAutoScroll(false);
+    }, 500))(event.target.scrollHeight, event.target.clientHeight, event.target.scrollTop);
+  };
 
   return (
     <React.Fragment>
@@ -211,13 +246,13 @@ export default function JobManagement() {
           </Row>
         </Col>
       </Row>
-      <Row className={cx(styles.log, { [styles.logAlignCenter]: isEmpty(log) })}>
+      <div className={cx(styles.log, { [styles.logAlignCenter]: isEmpty(log) })} onScroll={onScrollLog} ref={logPanel}>
         {isEmpty(log) ? <Empty description={false} /> : map(log, mess => (
           <div key={mess}>
             <Typography.Text>{mess}</Typography.Text>
           </div>
         ))}
-      </Row>
+      </div>
     </React.Fragment>
   );
 }

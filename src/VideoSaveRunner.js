@@ -210,25 +210,38 @@ export default class SaveHistoryJob {
         responseType: 'stream',
         attachVersionAndToken: false,
       }).then((response) => {
-        let timeout;
         const file = fs.createWriteStream(dest, { flag: 'w' });
+        const deleteFile = () => {
+          fs.unlink(dest, (err) => {
+            if (!err) {
+              this.logger(`Deleted file ${fileName} in ${dirPath}`);
+            }
+          });
+        };
+
+        let timeout;
         const refreshTimeout = () => {
           if (timeout !== undefined) clearTimeout(timeout);
           timeout = setTimeout(() => {
-            fs.unlink(dest, () => (err2) => {
-              if (!err2) {
-                this.logger(`Deleted file ${fileName} in ${dirPath}`);
-              }
-            });
+            response.data.close();
+            response.data.unpipe(file);
+            file.end();
+            deleteFile();
             reject(new Error(`Timeout on ${videoStreamByteUrl}`));
           }, 10000);
         };
+
         refreshTimeout();
         response.data.pipe(file);
         response.data.on('data', () => {
           refreshTimeout();
           if (this.isCancelled) {
-            throw new Error('Cancelled');
+            clearTimeout(timeout);
+            response.data.close();
+            response.data.unpipe(file);
+            file.end();
+            deleteFile();
+            reject(new Error('Cancelled'));
           }
         });
         response.data.on('end', () => {
@@ -238,11 +251,8 @@ export default class SaveHistoryJob {
         });
         response.data.on('error', (err) => {
           clearTimeout(timeout);
-          fs.unlink(dest, (err2) => {
-            if (!err2) {
-              this.logger(`Deleted file ${fileName} in ${dirPath}`);
-            }
-          });
+          file.end();
+          deleteFile();
           this.logger(`Save file ${fileName} to ${dirPath} FAIL`);
           reject(err);
         });

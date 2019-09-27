@@ -50,7 +50,7 @@ export default function JobManagement() {
   };
 
   const writeLog = (message) => {
-    updateLog(oldLog => [message, ...oldLog]);
+    updateLog(oldLog => oldLog.concat(message));
   };
 
   const finishAutoJob = () => {
@@ -190,9 +190,12 @@ export default function JobManagement() {
               {(() => {
                 const secs = status.autoRunTime;
                 const duration = moment.duration(secs, 'seconds');
-                return `${secs > 3600 ? `${duration.hours()}:` : ''}`
-                  + `${secs > 60 ? `${duration.minutes()}:` : ''}`
-                  + `${duration.seconds()}`;
+                const hours = duration.hours();
+                const minutes = duration.minutes();
+                const seconds = duration.seconds();
+                return `${`${hours > 9 ? '' : '0'}${hours}`}:`
+                  + `${`${minutes > 9 ? '' : '0'}${minutes}`}:`
+                  + `${seconds > 9 ? '' : '0'}${seconds}`;
               })()}
             </Typography.Paragraph>
           </Row>

@@ -24,10 +24,10 @@ const statusMap = {
 };
 
 let runTimeInterval;
+let runner;
 export default function JobManagement() {
   const [selectedRange, setSelectedRange] = useState([moment().subtract(30, 'days'), moment()]);
   const [isRunning, setIsRunning] = useState(false);
-  const [runner, setRunner] = useState(null);
   const [log, updateLog] = useState([]);
   const [jobType, setJobType] = useState(null);
   const [status, setStatus] = useState({
@@ -52,7 +52,7 @@ export default function JobManagement() {
   };
 
   const finishAutoJob = () => {
-    setRunner(null);
+    runner = null;
     setIsRunning(false);
     setStatus(oldStatus => ({ ...oldStatus, autoStatus: statusMap.notRunning }));
     clearInterval(runTimeInterval);
@@ -61,10 +61,8 @@ export default function JobManagement() {
   const startAutoJob = () => {
     updateLog([]);
     const instance = new VideoSaveRunner(writeLog);
-    instance.runCron().then(() => {
-      finishAutoJob();
-    });
-    setRunner(instance);
+    instance.runCron();
+    runner = instance;
     setIsRunning(true);
     setJobType(jobTypeMap.auto);
     setStatus(oldStatus => ({ ...oldStatus, autoStatus: statusMap.running, autoRunTime: 0 }));
@@ -81,7 +79,7 @@ export default function JobManagement() {
   };
 
   const finishManualJob = (statusRes) => {
-    setRunner(null);
+    runner = null;
     setIsRunning(false);
     let result = statusMap.success;
     if (statusRes === statusMap.failed) {
@@ -102,7 +100,7 @@ export default function JobManagement() {
     instance.run(selectedRange[0], selectedRange[1]).then((res) => {
       finishManualJob(res.status);
     });
-    setRunner(instance);
+    runner = instance;
     setIsRunning(true);
     setJobType(jobTypeMap.manual);
     setStatus(oldStatus => ({ ...oldStatus, manualLastStatus: statusMap.running }));

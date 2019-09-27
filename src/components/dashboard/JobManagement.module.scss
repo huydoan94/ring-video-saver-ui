@@ -15,7 +15,6 @@
 
 .content {
   background-color: #ffffff;
-  padding         : 12px;
   font-size       : 18px;
 }
 
@@ -23,11 +22,15 @@
   background-color: #ffffff;
   margin          : 12px 20px;
   overflow        : auto;
-  height          : calc(100vh - 282px);
+  height          : calc(100% - 283px);
   border          : rgb(232, 232, 232) 1px solid;
   border-radius   : 5px;
   padding         : 12px 20px;
   font-size       : 16px;
+
+  @media (max-width: 991px) {
+    height: calc(100% - 456px);
+  }
 
   &AlignCenter {
     display        : flex;
@@ -38,17 +41,29 @@
 
 .manualContainer,
 .jobContainer {
-  padding: 0 2px;
+  padding      : 12px;
+  border-bottom: rgb(232, 232, 232) 1px solid;
 }
 
 .manualContainer {
   &Button {
-    width      : calc(100% - 8px);
-    margin-left: 8px;
+    width: calc(100% - 8px);
+  }
+
+  &DateSelect {
+    width: 100%
+  }
+
+  &Actions {
+    display        : flex;
+    justify-content: space-between;
   }
 }
 
 .jobContainer {
+  border-left: rgb(232, 232, 232) 1px solid;
+  margin-left: -1px;
+
   &Button {
     width: 100%;
   }

@@ -39,6 +39,8 @@ export default function JobManagement() {
 
   useEffect(() => () => {
     clearInterval(runTimeInterval);
+    if (runner !== null) runner.cancel();
+    runner = null;
   }, []);
 
   const startCountRunTime = () => {
@@ -130,7 +132,7 @@ export default function JobManagement() {
         </Typography.Title>
       </div>
       <Row className={styles.content}>
-        <Col md={12} className={styles.manualContainer}>
+        <Col lg={12} className={styles.manualContainer}>
           <Row>
             <Typography.Title level={3}>Manual</Typography.Title>
           </Row>
@@ -145,11 +147,11 @@ export default function JobManagement() {
               {' '}
               {status.manualLastRunTime === null
                 ? null
-                : moment(status.manualLastRunTime).format('MMM dd, YYYY HH:mm:ss')
+                : moment(status.manualLastRunTime).format('MMM DD, YYYY HH:mm:ss')
               }
             </Typography.Paragraph>
           </Row>
-          <Row>
+          <Row className={styles.manualContainerActions}>
             <Col md={16}>
               <DatePicker.RangePicker
                 value={selectedRange}
@@ -157,9 +159,10 @@ export default function JobManagement() {
                 allowClear={false}
                 disabledDate={current => moment(current).isAfter(moment())}
                 onChange={onSelectRange}
+                className={styles.manualContainerDateSelect}
               />
             </Col>
-            <Col md={8}>
+            <Col md={7}>
               <Button
                 type="primary"
                 className={styles.manualContainerButton}
@@ -171,7 +174,7 @@ export default function JobManagement() {
             </Col>
           </Row>
         </Col>
-        <Col md={12} className={styles.jobContainer}>
+        <Col lg={12} className={styles.jobContainer}>
           <Row>
             <Typography.Title level={3}>Job</Typography.Title>
           </Row>

@@ -3,18 +3,34 @@ const path = require('path');
 const isDev = require('electron-is-dev');
 const os = require('os');
 
-const { app, BrowserWindow } = electron;
+const { app, BrowserWindow, Menu } = electron;
 let mainWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 900,
+    width: 1000,
     height: 680,
     webPreferences: {
       nodeIntegration: true,
       webSecurity: false,
     },
   });
+
+  if (process.platform === 'darwin') {
+    const template = [
+      {
+        label: app.getName(),
+        submenu: [{ role: 'about' }, { type: 'separator' }, { role: 'hide' }, { role: 'quit' }],
+      },
+
+    ];
+
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  } else {
+    Menu.setApplicationMenu(null);
+  }
+
+  mainWindow.removeMenu();
   mainWindow.loadURL(isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`);
   if (isDev) {
     // Open the DevTools.

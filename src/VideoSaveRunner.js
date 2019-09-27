@@ -563,7 +563,8 @@ export default class SaveHistoryJob {
         this.logger(`Job run FAIL at ${moment().format('l LT')} --- ${e}`);
       }
 
-      return sleep(60000).then(() => cronJob());
+      await sleep(60000);
+      return cronJob();
     };
     return cronJob();
   }

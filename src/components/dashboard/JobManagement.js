@@ -71,18 +71,14 @@ export default function JobManagement() {
 
   const updateLogWithBuffer = (() => {
     let buffer = [];
-    let timeoutClearBuffer = null;
-    const applyTimeout = () => setTimeout(() => {
-      updateLog(oldLog => oldLog.concat(buffer));
-      timeoutClearBuffer = null;
+    const freeBuffer = debounce((targetBuffer) => {
+      updateLog(oldLog => oldLog.concat(targetBuffer));
       buffer = [];
-    }, 1000);
+    }, 150, { maxWait: 500 });
 
     return (mess) => {
       buffer = buffer.concat(mess);
-      if (timeoutClearBuffer === null) {
-        timeoutClearBuffer = applyTimeout();
-      }
+      freeBuffer(buffer);
     };
   })();
 

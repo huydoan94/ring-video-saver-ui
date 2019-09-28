@@ -63,7 +63,6 @@ export default function JobManagement() {
   useEffect(() => {
     if (logPanel.current && isAutoScroll) {
       logPanel.current.scrollTo({
-        behavior: 'smooth',
         top: logPanel.current.scrollHeight,
       });
     }

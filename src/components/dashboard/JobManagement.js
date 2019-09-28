@@ -215,6 +215,7 @@ export default function JobManagement() {
             size="large"
             className={styles.folderSelectButton}
             onClick={onChangeDownloadLocation}
+            disabled={isRunning}
           >
             Change
           </Button>

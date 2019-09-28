@@ -38,8 +38,8 @@ function createWindow() {
     BrowserWindow.addDevToolsExtension(path.join(os.homedir(), '/Library/Application Support/Google/Chrome/Default/Extensions/fmkadmapgofadopljbjfkapdkoienihi/4.1.1_0'));
     // eslint-disable-next-line max-len
     BrowserWindow.addDevToolsExtension(path.join(os.homedir(), '/Library/Application Support/Google/Chrome/Default/Extensions/lmhkpmbekcpmknklioeibfkpmmfibljd/2.17.0_0'));
-    mainWindow.webContents.openDevTools();
   }
+  mainWindow.webContents.openDevTools();
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 

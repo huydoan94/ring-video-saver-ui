@@ -1,15 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Typography, Icon, Row, Col,
+  Typography, Icon, Row, Col, Input,
   DatePicker, Button, Empty,
 } from 'antd';
 import moment from 'moment';
-import { isEmpty, map, debounce } from 'lodash';
+import {
+  isEmpty, map, debounce, get,
+} from 'lodash';
 import cx from 'classnames';
 
+import { electron, electronImport } from '../../utils/electron';
 import VideoSaveRunner from '../../VideoSaveRunner';
 import styles from './JobManagement.module.scss';
 
+const platformFolders = electronImport('platform-folders');
+const path = electronImport('path');
+
+const defaultHomeDir = path.join(platformFolders.getDocumentsFolder(), 'Ring Video Saver');
 const dateFormat = 'MMM DD, YYYY';
 const jobTypeMap = {
   auto: 'auto',
@@ -30,19 +37,27 @@ export default function JobManagement() {
   const [isRunning, setIsRunning] = useState(false);
   const [log, updateLog] = useState([]);
   const [jobType, setJobType] = useState(null);
+  const [isAutoScroll, setIsAutoScroll] = useState(true);
+  const [downloadLocation, changeDownloadLocation] = useState(localStorage.getItem('downloadLocation'));
   const [status, setStatus] = useState({
     manualLastStatus: localStorage.getItem('manualLastStatus'),
     manualLastRunTime: localStorage.getItem('manualLastRunTime'),
     autoStatus: statusMap.notRunning,
     autoRunTime: 0,
   });
-  const [isAutoScroll, setIsAutoScroll] = useState(true);
   const logPanel = useRef(null);
 
-  useEffect(() => () => {
-    clearInterval(runTimeInterval);
-    if (runner !== null) runner.cancel();
-    runner = null;
+  useEffect(() => {
+    if (isEmpty(downloadLocation)) {
+      const homedir = defaultHomeDir;
+      changeDownloadLocation(homedir);
+    }
+
+    return () => {
+      clearInterval(runTimeInterval);
+      if (runner !== null) runner.cancel();
+      runner = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -90,7 +105,7 @@ export default function JobManagement() {
 
   const startAutoJob = () => {
     updateLog([]);
-    const instance = new VideoSaveRunner(writeLog);
+    const instance = new VideoSaveRunner(writeLog, downloadLocation);
     instance.runCron();
     runner = instance;
     setIsRunning(true);
@@ -126,7 +141,7 @@ export default function JobManagement() {
 
   const startManualJob = () => {
     updateLog([]);
-    const instance = new VideoSaveRunner(writeLog);
+    const instance = new VideoSaveRunner(writeLog, downloadLocation);
     instance.run(selectedRange[0], selectedRange[1]).then((res) => {
       finishManualJob(res.status);
     });
@@ -144,6 +159,17 @@ export default function JobManagement() {
       runner.cancel();
       finishManualJob(statusMap.cancelled);
     }
+  };
+
+  const onChangeDownloadLocation = () => {
+    electron.remote.dialog.showOpenDialog({
+      properties: ['openDirectory'],
+    }).then((res) => {
+      const folder = get(res, 'filePaths.0');
+      if (isEmpty(folder)) return;
+      localStorage.setItem('downloadLocation', folder);
+      changeDownloadLocation(folder);
+    });
   };
 
   const onSelectRange = (range) => {
@@ -169,6 +195,31 @@ export default function JobManagement() {
           Job Management
         </Typography.Title>
       </div>
+      <Row className={styles.folderSelectContainer}>
+        <div>
+          <Typography.Text className={styles.folderSelectTitle}>
+            Download to
+          </Typography.Text>
+        </div>
+        <Col xs={20}>
+          <Input
+            value={downloadLocation}
+            size="large"
+            className={styles.folderSelectInput}
+            disabled
+          />
+        </Col>
+        <Col xs={4}>
+          <Button
+            type="primary"
+            size="large"
+            className={styles.folderSelectButton}
+            onClick={onChangeDownloadLocation}
+          >
+            Change
+          </Button>
+        </Col>
+      </Row>
       <Row className={styles.content}>
         <Col lg={12} className={styles.manualContainer}>
           <Row>

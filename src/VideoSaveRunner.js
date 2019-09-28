@@ -16,13 +16,14 @@ import sleep from './utils/sleep';
 import promiseFetchWithRetry from './utils/promiseFetchWithRetry';
 import promiseAllWithLimit from './utils/promiseAllWithLimit';
 import promiseMap from './utils/promiseMap';
-import { electron, electronImport } from './utils/electron';
+import { electronImport } from './utils/electron';
 import CancellablePromise from './utils/cancellablePromise';
 import { login, loginUseToken, createSession } from './components/Login.services';
 
 const fs = electronImport('fs');
 const path = electronImport('path');
 const libaxios = electronImport('axios');
+const platformFolders = electronImport('platform-folders');
 
 async function axios(...params) {
   return new Promise((resolve, reject) => {
@@ -46,12 +47,23 @@ const statusMap = {
   cancelled: 'CANCELLED',
 };
 export default class SaveHistoryJob {
-  constructor(outsideLogger) {
+  constructor(outsideLogger, downloadLocation) {
     this.outsideLogger = outsideLogger;
     this.isCancelled = false;
 
-    const logFilePath = path.join(electron.remote.app.getAppPath(), 'log.txt');
+    const logFileDir = path.join(platformFolders.getDataHome(), 'Ring Video Saver');
+    const logFilePath = path.join(logFileDir, 'log.txt');
+
+    if (!fs.existsSync(logFileDir)) {
+      fs.mkdirSync(logFileDir, { recursive: true });
+    }
+
+    if (!fs.existsSync(downloadLocation)) {
+      fs.mkdirSync(downloadLocation, { recursive: true });
+    }
+
     this.logFile = fs.createWriteStream(logFilePath, { flags: 'a' });
+    this.downloadLocation = downloadLocation;
 
     cancellablePromise = new CancellablePromise();
 
@@ -271,7 +283,6 @@ export default class SaveHistoryJob {
 
   async downloadHistoryVideos(history) {
     this.logger('Start downloading history videos');
-    const rootDir = electron.remote.app.getAppPath();
     let downloadPool = await promiseMap(history, async (h) => {
       const downloadUrl = `https://api.ring.com/clients_api/dings/${h.id}/share/download_status`
         + '?disable_redirect=true';
@@ -287,7 +298,7 @@ export default class SaveHistoryJob {
         isFailed: false,
         isDownloaded: false,
         isSkipped: false,
-        dir: path.join(rootDir, dirPath),
+        dir: path.join(this.downloadLocation, dirPath),
         dirPath,
       };
     });

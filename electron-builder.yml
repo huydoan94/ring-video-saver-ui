@@ -1,0 +1,13 @@
+appId: "com.ring-video-saver.ui"
+productName: "Ring Video Saver"
+copyright: "Copyright © 2019 ${author}"
+
+mac:
+  category: "public.app-category.utilities"
+
+files: ["build/**/*", "node_modules/**/*"]
+
+directories:
+  buildResources: "assets"
+
+npmRebuild: false

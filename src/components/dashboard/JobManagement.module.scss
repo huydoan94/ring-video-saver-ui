@@ -22,7 +22,7 @@
   background-color: #ffffff;
   margin          : 12px 20px;
   overflow        : auto;
-  height          : calc(100% - 283px);
+  height          : calc(100% - 367px);
   border          : rgb(232, 232, 232) 1px solid;
   border-radius   : 5px;
   padding         : 12px 20px;
@@ -30,7 +30,7 @@
   white-space     : pre-wrap;
 
   @media (max-width: 991px) {
-    height: calc(100% - 456px);
+    height: calc(100% - 540px);
   }
 
   &AlignCenter {
@@ -67,5 +67,35 @@
 
   &Button {
     width: 100%;
+  }
+}
+
+.folderSelect {
+  &Container {
+    padding         : 5px 12px;
+    background-color: #ffffff;
+    border-bottom   : rgb(232, 232, 232) 1px solid;
+
+    >div {
+      line-height: 1em;
+    }
+  }
+
+  &Title {
+    font-size: 18px;
+  }
+
+  &Input {
+    width                     : 100%;
+    border-right              : none;
+    border-top-right-radius   : 0;
+    border-bottom-right-radius: 0;
+    background-color          : #ffffff !important;
+  }
+
+  &Button {
+    width                    : 100%;
+    border-top-left-radius   : 0;
+    border-bottom-left-radius: 0;
   }
 }

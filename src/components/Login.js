@@ -30,7 +30,7 @@ function LoginForm({
   const { getFieldDecorator, validateFields } = form;
 
   useEffect(() => {
-    const isRemember = localStorage.get('isRemember');
+    const isRemember = localStorage.getItem('isRemember');
     if (!isRemember) {
       localStorage.setItem('authData', null);
     }

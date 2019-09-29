@@ -13,8 +13,8 @@ import Routes from './App.routes';
 
 function startingAppCheck() {
   const appVersion = electron.remote.app.getVersion();
-  let previousVersion = localStorage.get('runningVersion');
-  if (isEmpty(previousVersion)) previousVersion = '0';
+  let previousVersion = localStorage.getItem('runningVersion');
+  if (isEmpty(previousVersion)) previousVersion = '0.0.0';
 
   if (appVersion === '0.1.3' && semver.gt(appVersion, previousVersion)) {
     localStorage.setItem('isRemember', false);

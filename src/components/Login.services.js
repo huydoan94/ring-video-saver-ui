@@ -72,12 +72,10 @@ export const createSession = (accessToken) => {
   };
 
   return axios({
-    url: `https://api.ring.com/clients_api/session?api_version=${API_VERSION}`,
+    url: 'https://api.ring.com/clients_api/session',
     method: 'POST',
     data: reqBody,
     headers: {
-      'content-type': 'application/json',
-      'content-length': JSON.stringify(reqBody).length,
       Authorization: `Bearer ${accessToken}`,
     },
   }).then((res) => {

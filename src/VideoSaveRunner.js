@@ -18,7 +18,8 @@ import promiseAllWithLimit from './utils/promiseAllWithLimit';
 import promiseMap from './utils/promiseMap';
 import { electronImport } from './utils/electron';
 import CancellablePromise from './utils/cancellablePromise';
-import { login, loginUseToken, createSession } from './components/Login.services';
+import createDirs from './utils/createDirs';
+import { loginUseToken, createSession } from './components/Login.services';
 
 const fs = electronImport('fs');
 const path = electronImport('path');
@@ -104,15 +105,9 @@ export default class SaveHistoryJob {
     });
   }
 
-  async createDirs(dirs) {
-    return reduce(dirs, (acc, d) => acc.then(() => cancellablePromise.run((resolve, reject) => {
-      fs.mkdir(d, '0777', (err) => {
-        if (err) {
-          if (err.code === 'EEXIST') resolve();
-          else reject(err);
-        } else resolve();
-      });
-    })), Promise.resolve());
+  cancel() {
+    this.isCancelled = true;
+    cancellablePromise.cancel();
   }
 
   // ---- SESSION AND TOKEN PART ----- //
@@ -126,11 +121,6 @@ export default class SaveHistoryJob {
     const refreshToken = get(authData, 'refreshToken');
     this.logger('Logging in');
     return cancellablePromise.wrap(promiseFetchWithRetry(loginUseToken, refreshToken))
-      .then(res => get(res, 'access_token'))
-      .catch(() => {
-        const { username, password } = JSON.parse(localStorage.getItem('authRequest'));
-        return cancellablePromise.wrap(promiseFetchWithRetry(login, username, password));
-      })
       .then((res) => {
         this.logger('Log in sucessful');
         return get(res, 'access_token');
@@ -314,7 +304,7 @@ export default class SaveHistoryJob {
       if (acc.indexOf(d.dir) !== -1) return acc;
       return [d.dir, ...acc];
     }, []);
-    await this.createDirs(dirs);
+    await createDirs(dirs);
 
     await promiseAllWithLimit(
       map(downloadPool, d => () => cancellablePromise.wrap(this.saveByteStreamVideo(d))
@@ -370,28 +360,30 @@ export default class SaveHistoryJob {
       + `to ${moment(to).format('l LT')}`);
     if (isEmpty(from)) return [];
     if (moment(from).isAfter(moment(to))) return [];
+
+    let earliestEventTime;
     let earliestEventId = 0;
     let totalEvents = [];
-    while (
-      earliestEventId === 0
-      || moment(last(totalEvents).created_at).isAfter(moment(from))
-    ) {
+    while (moment(earliestEventTime).isAfter(moment(from))) {
       const historyEvents = await this.getLimitHistory(earliestEventId);
-      if (isEmpty(historyEvents)) break;
-      if (earliestEventId.toString() === last(historyEvents).id.toString()) break;
-      if (moment(last(historyEvents).created_at).isBefore(moment(from))) {
-        const evts = filter(historyEvents, e => moment(e.created_at).isAfter(moment(from)));
-        totalEvents = totalEvents.concat(evts);
-        break;
-      }
-      totalEvents = totalEvents.concat(historyEvents);
+      const earliestEvent = last(historyEvents);
 
-      const earliestEvent = last(totalEvents);
+      if (isEmpty(historyEvents)) break;
+      if (earliestEventTime === earliestEvent.created_at) break;
+
+      if (moment(earliestEvent.created_at).isBefore(moment(from))) {
+        const evts = filter(historyEvents, e => moment(e.created_at).isSameOrAfter(moment(from)));
+        totalEvents = totalEvents.concat(evts);
+      } else {
+        totalEvents = totalEvents.concat(historyEvents);
+      }
+
       earliestEventId = earliestEvent.id;
+      earliestEventTime = earliestEvent.created_at;
     }
     this.logger(`Get history from ${moment(from).format('l LT')} `
       + `to ${moment(to).format('l LT')} sucessful`);
-    return filter(totalEvents, evt => moment(evt.created_at).isBefore(moment(to)));
+    return filter(totalEvents, evt => moment(evt.created_at).isSameOrBefore(moment(to)));
   }
 
   // -------- NORMAL RUN PART -------- //
@@ -541,10 +533,5 @@ export default class SaveHistoryJob {
       return cronJob();
     };
     return cronJob();
-  }
-
-  cancel() {
-    this.isCancelled = true;
-    cancellablePromise.cancel();
   }
 }

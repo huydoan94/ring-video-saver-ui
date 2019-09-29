@@ -9,6 +9,9 @@ const saveAuthData = (data) => {
   localStorage.setItem('authData', JSON.stringify({
     accessToken: get(data, 'access_token'),
     refreshToken: get(data, 'refresh_token'),
+    expiresIn: get(data, 'expires_in'),
+    scope: get(data, 'scope'),
+    tokenType: get(data, 'token_type'),
   }));
 };
 
@@ -20,11 +23,6 @@ export const login = (username, password) => {
     scope: 'client',
     client_id: 'ring_official_android',
   };
-
-  localStorage.setItem('authRequest', JSON.stringify({
-    username,
-    password,
-  }));
 
   return axios({
     url: 'https://oauth.ring.com/oauth/token',

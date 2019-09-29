@@ -21,3 +21,8 @@ export const getRefreshToken = createSelector(
   getLoginStates,
   state => state.refreshToken,
 );
+
+export const getIsRemember = createSelector(
+  getLoginStates,
+  state => state.isRemember,
+);

@@ -15,7 +15,8 @@ import {
 
 import { actions } from './Login.actions';
 import {
-  getErrorMessage, getLogInState, getAccessToken, getRefreshToken,
+  getErrorMessage, getLogInState, getAccessToken,
+  getRefreshToken, getIsRemember,
 } from './Login.selectors';
 import isAuthenticated from '../utils/isAuthenticated';
 
@@ -23,22 +24,25 @@ import styles from './Login.module.scss';
 
 function LoginForm({
   form, login, errorMessage, isLoggingIn,
-  accessToken, refreshToken, history, paths,
+  accessToken, history, paths,
+  isRemembered,
 }) {
   const { getFieldDecorator, validateFields } = form;
 
   useEffect(() => {
-    if (isAuthenticated()) {
+    const isRemember = localStorage.get('isRemember');
+    if (!isRemember) {
+      localStorage.setItem('authData', null);
+    }
+    if (isAuthenticated() && isRemember) {
       history.push(paths.dashboard);
     }
-  });
+  }, []);
 
   useEffect(() => {
     if (isEmpty(errorMessage) && !isEmpty(accessToken)) {
-      localStorage.setItem('authData', JSON.stringify({
-        accessToken,
-        refreshToken,
-      }));
+      if (isRemembered) localStorage.setItem('isRemember', true);
+      else localStorage.setItem('isRemember', false);
       history.push(paths.dashboard);
     }
   }, [accessToken]);
@@ -119,13 +123,12 @@ LoginForm.propTypes = {
   errorMessage: string,
   isLoggingIn: bool.isRequired,
   accessToken: string,
-  refreshToken: string,
+  isRemembered: bool.isRequired,
 };
 
 LoginForm.defaultProps = {
   errorMessage: null,
   accessToken: null,
-  refreshToken: null,
 };
 
 const mapStatesToProps = createStructuredSelector({
@@ -133,6 +136,7 @@ const mapStatesToProps = createStructuredSelector({
   isLoggingIn: getLogInState,
   accessToken: getAccessToken,
   refreshToken: getRefreshToken,
+  isRemembered: getIsRemember,
 });
 
 const mapDispatchToProps = dispatch => ({

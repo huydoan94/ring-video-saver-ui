@@ -1,7 +1,7 @@
 import React from 'react';
 import { Provider } from 'react-redux';
 import { HashRouter } from 'react-router-dom';
-import { isEmpty, get } from 'lodash';
+import { isEmpty } from 'lodash';
 import semver from 'semver';
 import 'antd/dist/antd.css';
 

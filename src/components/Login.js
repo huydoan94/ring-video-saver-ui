@@ -37,7 +37,7 @@ function LoginForm({
   const error = useSelector(getError);
 
   const clearResendCountdown = () => {
-    if (!isEmpty(resendCountInterval)) {
+    if (resendCountInterval !== undefined) {
       clearInterval(resendCountInterval);
       resendCountInterval = undefined;
     }
@@ -61,6 +61,7 @@ function LoginForm({
     }
     return () => {
       reset();
+      clearResendCountdown();
     };
   }, []);
 
@@ -84,9 +85,6 @@ function LoginForm({
     if (resendRemain < 1) {
       clearResendCountdown();
     }
-    return () => {
-      clearResendCountdown();
-    };
   }, [resendRemain]);
 
   const onClickResend = () => {

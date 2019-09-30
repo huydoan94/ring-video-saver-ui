@@ -73,10 +73,15 @@ function LoginForm({
   }, [accessToken, error]);
 
   useEffect(() => {
-    if (resendRemain < 1 && resendCountInterval !== undefined) {
+    if (resendRemain < 1 && !isEmpty(resendCountInterval)) {
       clearInterval(resendCountInterval);
       resendCountInterval = undefined;
     }
+    return () => {
+      if (!isEmpty(resendCountInterval)) {
+        clearInterval(resendCountInterval);
+      }
+    };
   }, [resendRemain]);
 
   const onClickResend = () => {

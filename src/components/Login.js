@@ -36,7 +36,15 @@ function LoginForm({
   const isRemembered = useSelector(getIsRemember);
   const error = useSelector(getError);
 
+  const clearResendCountdown = () => {
+    if (!isEmpty(resendCountInterval)) {
+      clearInterval(resendCountInterval);
+      resendCountInterval = undefined;
+    }
+  };
+
   const triggerResendCountdown = () => {
+    clearResendCountdown();
     setResendRemain(30);
     resendCountInterval = setInterval(() => {
       setResendRemain((oldC => oldC - 1));
@@ -73,14 +81,11 @@ function LoginForm({
   }, [accessToken, error]);
 
   useEffect(() => {
-    if (resendRemain < 1 && !isEmpty(resendCountInterval)) {
-      clearInterval(resendCountInterval);
-      resendCountInterval = undefined;
+    if (resendRemain < 1) {
+      clearResendCountdown();
     }
     return () => {
-      if (!isEmpty(resendCountInterval)) {
-        clearInterval(resendCountInterval);
-      }
+      clearResendCountdown();
     };
   }, [resendRemain]);
 
@@ -92,6 +97,7 @@ function LoginForm({
     setFieldsValue({ username: userAndPass.username });
     setUserAndPass({});
     setIs2faRequired(false);
+    clearResendCountdown();
   };
 
   const handleSubmit = (e) => {
@@ -108,6 +114,7 @@ function LoginForm({
             login(username, password, undefined, isRemember);
             setUserAndPass({ username, password, isRemember });
           }
+          clearResendCountdown();
         }
       },
     );

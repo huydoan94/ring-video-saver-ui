@@ -16,7 +16,7 @@ const initialState = {
 };
 
 const login = (state = initialState, {
-  type, data, isRemember, error,
+  type, data, error,
 }) => {
   switch (type) {
     case actionTypes.LOGIN.START:
@@ -30,7 +30,6 @@ const login = (state = initialState, {
       return {
         ...state,
         ...toCamelCaseKey,
-        isRemember,
         isLoggingIn: false,
         lastLoggedIn: moment().format(),
         errorCode: null,
@@ -47,6 +46,8 @@ const login = (state = initialState, {
         ...state,
         errorCode: null,
       };
+    case actionTypes.RESET_LOGIN_STATE:
+      return initialState;
     default:
       return state;
   }

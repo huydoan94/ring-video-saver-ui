@@ -1,11 +1,13 @@
-import { get } from 'lodash';
+import { get, isEmpty } from 'lodash';
 import axios from 'axios';
 
 import { API_VERSION } from '../constants';
 import getHardwareId from '../utils/getHardwareId';
+import userstorage from '../utils/userstorage';
 
 const saveAuthData = (data) => {
   if (!data) localStorage.setItem('authData', null);
+
   localStorage.setItem('authData', JSON.stringify({
     accessToken: get(data, 'access_token'),
     refreshToken: get(data, 'refresh_token'),
@@ -15,7 +17,7 @@ const saveAuthData = (data) => {
   }));
 };
 
-export const login = (username, password) => {
+export const login = (username, password, twoFactorAuthCode) => {
   const reqBody = {
     username,
     password,
@@ -28,12 +30,19 @@ export const login = (username, password) => {
     url: 'https://oauth.ring.com/oauth/token',
     method: 'POST',
     data: reqBody,
+    headers: {
+      '2fa-support': 'true',
+      '2fa-code': isEmpty(twoFactorAuthCode) ? '' : twoFactorAuthCode,
+      hardware_id: getHardwareId(),
+    },
   }).then((res) => {
     const data = get(res, 'data');
-    saveAuthData(data);
+    saveAuthData(data, username);
+    localStorage.setItem('currentUser', username);
     return data;
   }).catch((err) => {
     saveAuthData();
+    localStorage.setItem('currentUser', null);
     throw err;
   });
 };
@@ -50,6 +59,9 @@ export const loginUseToken = (refreshToken) => {
     url: 'https://oauth.ring.com/oauth/token',
     method: 'POST',
     data: reqBody,
+    headers: {
+      hardware_id: getHardwareId(),
+    },
   }).then((res) => {
     const data = get(res, 'data');
     saveAuthData(data);
@@ -80,10 +92,16 @@ export const createSession = (accessToken) => {
     },
   }).then((res) => {
     const sessionToken = get(res, 'data.profile.authentication_token');
-    localStorage.setItem('sessionToken', sessionToken);
+    userstorage.setItem('sessionToken', sessionToken);
     return sessionToken;
   }).catch((err) => {
-    localStorage.setItem('sessionToken', null);
+    userstorage.setItem('sessionToken', null);
     throw err;
   });
+};
+
+export const logout = () => {
+  userstorage.setItem('sessionToken', null);
+  localStorage.setItem('authData', null);
+  localStorage.setItem('isRemember', false);
 };

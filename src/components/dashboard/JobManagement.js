@@ -10,6 +10,7 @@ import {
 import cx from 'classnames';
 
 import { electron, electronImport } from '../../utils/electron';
+import userstorage from '../../utils/userstorage';
 import VideoSaveRunner from '../../VideoSaveRunner';
 import styles from './JobManagement.module.scss';
 
@@ -38,10 +39,10 @@ export default function JobManagement() {
   const [log, updateLog] = useState([]);
   const [jobType, setJobType] = useState(null);
   const [isAutoScroll, setIsAutoScroll] = useState(true);
-  const [downloadLocation, changeDownloadLocation] = useState(localStorage.getItem('downloadLocation'));
+  const [downloadLocation, changeDownloadLocation] = useState(userstorage.getItem('downloadLocation'));
   const [status, setStatus] = useState({
-    manualLastStatus: localStorage.getItem('manualLastStatus'),
-    manualLastRunTime: localStorage.getItem('manualLastRunTime'),
+    manualLastStatus: userstorage.getItem('manualLastStatus'),
+    manualLastRunTime: userstorage.getItem('manualLastRunTime'),
     autoStatus: statusMap.notRunning,
     autoRunTime: 0,
   });
@@ -55,7 +56,7 @@ export default function JobManagement() {
 
     return () => {
       clearInterval(runTimeInterval);
-      if (runner !== null) runner.cancel();
+      if (!isEmpty(runner)) runner.cancel();
       runner = null;
     };
   }, []);
@@ -130,8 +131,8 @@ export default function JobManagement() {
     }
     const lastRunTime = moment();
     setStatus(oldStatus => ({ ...oldStatus, manualLastStatus: result, manualLastRunTime: lastRunTime }));
-    localStorage.setItem('manualLastStatus', result);
-    localStorage.setItem('manualLastRunTime', lastRunTime.format());
+    userstorage.setItem('manualLastStatus', result);
+    userstorage.setItem('manualLastRunTime', lastRunTime.format());
   };
 
   const startManualJob = () => {
@@ -144,7 +145,7 @@ export default function JobManagement() {
     setIsRunning(true);
     setJobType(jobTypeMap.manual);
     setStatus(oldStatus => ({ ...oldStatus, manualLastStatus: statusMap.running }));
-    localStorage.setItem('manualLastStatus', statusMap.running);
+    userstorage.setItem('manualLastStatus', statusMap.running);
   };
 
   const triggerManualJob = () => {
@@ -162,7 +163,7 @@ export default function JobManagement() {
     }).then((res) => {
       const folder = get(res, 'filePaths.0');
       if (isEmpty(folder)) return;
-      localStorage.setItem('downloadLocation', folder);
+      userstorage.setItem('downloadLocation', folder);
       changeDownloadLocation(folder);
     });
   };

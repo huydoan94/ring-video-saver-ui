@@ -1,7 +1,7 @@
 import React from 'react';
 import { Provider } from 'react-redux';
 import { HashRouter } from 'react-router-dom';
-import { isEmpty } from 'lodash';
+import { isEmpty, get } from 'lodash';
 import semver from 'semver';
 import 'antd/dist/antd.css';
 
@@ -17,8 +17,15 @@ function startingAppCheck() {
   if (isEmpty(previousVersion)) previousVersion = '0.0.0';
 
   if (appVersion === '0.1.3' && semver.gt(appVersion, previousVersion)) {
-    localStorage.setItem('isRemember', false);
-    localStorage.setItem('authData', null);
+    localStorage.clear();
+  }
+
+  if (appVersion === '0.1.4' && semver.gt(appVersion, previousVersion)) {
+    localStorage.clear();
+  }
+
+  if (appVersion !== previousVersion) {
+    localStorage.setItem('runningVersion', appVersion);
   }
 }
 

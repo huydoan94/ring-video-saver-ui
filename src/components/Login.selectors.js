@@ -2,11 +2,6 @@ import { createSelector } from 'reselect';
 
 const getLoginStates = states => states.authData;
 
-export const getErrorMessage = createSelector(
-  getLoginStates,
-  state => state.errorCode,
-);
-
 export const getLogInState = createSelector(
   getLoginStates,
   state => state.isLoggingIn,
@@ -25,4 +20,9 @@ export const getRefreshToken = createSelector(
 export const getIsRemember = createSelector(
   getLoginStates,
   state => state.isRemember,
+);
+
+export const getError = createSelector(
+  getLoginStates,
+  state => state.errorCode,
 );

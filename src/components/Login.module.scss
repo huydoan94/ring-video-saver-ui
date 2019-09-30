@@ -10,6 +10,7 @@
   padding         : 40px 56px 60px 56px;
   border-radius   : 12px;
   box-shadow      : 0 2px 4px rgba(0, 0, 0, 0.2);
+  width           : 450px;
 }
 
 .input {
@@ -38,4 +39,25 @@
   &Error {
     margin-top: 24px;
   }
+}
+
+.backButton {
+  border-top-right-radius   : 0;
+  border-bottom-right-radius: 0;
+}
+
+.loginButton {
+  border-top-left-radius   : 0;
+  border-bottom-left-radius: 0;
+}
+
+.verificationInput {
+  border-top-right-radius   : 0;
+  border-bottom-right-radius: 0;
+}
+
+.verificationButton {
+  border-top-left-radius   : 0;
+  border-bottom-left-radius: 0;
+  width                    : 100%;
 }

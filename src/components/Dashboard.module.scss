@@ -11,11 +11,21 @@
   }
 
   i {
-    font-size: 1em !important;
+    font-size   : 1em !important;
     margin-right: 8px;
   }
 }
 
 .sider {
-  border-right:rgb(232, 232, 232) 1px solid;
+  border-right: rgb(232, 232, 232) 1px solid;
+
+  >div {
+    display       : flex;
+    flex-direction: column;
+  }
+}
+
+.logoutBtn {
+  justify-self: flex-end;
+  margin      : 0 8px 8px 8px;
 }

@@ -19,6 +19,7 @@ import promiseMap from './utils/promiseMap';
 import { electronImport } from './utils/electron';
 import CancellablePromise from './utils/cancellablePromise';
 import createDirs from './utils/createDirs';
+import userstorage from './utils/userstorage';
 import { loginUseToken, createSession } from './components/Login.services';
 
 const fs = electronImport('fs');
@@ -105,6 +106,59 @@ export default class SaveHistoryJob {
     });
   }
 
+  readMeta() {
+    const meta = userstorage.getItem('metadata');
+    if (isEmpty(meta)) return {};
+    return JSONBigInt.parse(meta);
+  }
+
+  writeMeta(data) {
+    userstorage.setItem('metadata', JSONBigInt.stringify(data));
+  }
+
+  createMetaData(oldMeta, downloadPool) {
+    const sorted = downloadPool.sort((a, b) => {
+      if (moment(a.created_at).isAfter(moment(b.created_at))) return -1;
+      if (moment(a.created_at).isBefore(moment(b.created_at))) return 1;
+      return 0;
+    });
+    const oldFailedEvents = get(oldMeta, 'failedEvents', []);
+    const traversedEventIDs = get(oldMeta, 'traversedEventIds', []);
+
+    const failedEvents = filter(sorted, e => e.isFailed);
+    const downloadedEvent = filter(sorted, e => e.isDownloaded);
+
+    failedEvents.forEach((f) => {
+      if (oldFailedEvents.findIndex(o => o.id.toString() === f.id.toString()) === -1) {
+        oldFailedEvents.push(f);
+      }
+    });
+    const newFailedEvents = filter(
+      oldFailedEvents,
+      o => downloadedEvent.findIndex(d => d.id.toString() === o.id.toString()) === -1,
+    );
+
+    downloadPool.forEach((d) => {
+      if (traversedEventIDs.findIndex(id => id.toString() === d.id.toString()) === -1) {
+        traversedEventIDs.push(d.id);
+      }
+    });
+    let lastestEvent = isEmpty(oldMeta.lastestEvent) ? {} : oldMeta.lastestEvent;
+    if (!isEmpty(sorted)) {
+      if (isEmpty(oldMeta.lastestEventTime)) {
+        lastestEvent = sorted[0];
+      } else if (moment(oldMeta.lastestEventTime).isBefore(moment(sorted[0].created_at))) {
+        lastestEvent = sorted[0];
+      }
+    }
+    return {
+      lastestEvent,
+      lastestEventTime: lastestEvent.created_at,
+      failedEvents: newFailedEvents,
+      traversedEventIds: traversedEventIDs,
+    };
+  }
+
   cancel() {
     this.isCancelled = true;
     cancellablePromise.cancel();
@@ -132,7 +186,7 @@ export default class SaveHistoryJob {
   }
 
   async getSession(skipCurrentSession = false) {
-    const sessionToken = localStorage.getItem('sessionToken');
+    const sessionToken = userstorage.getItem('sessionToken');
     if (!skipCurrentSession && !isEmpty(sessionToken)) {
       return sessionToken;
     }
@@ -427,60 +481,6 @@ export default class SaveHistoryJob {
 
   // ----------- CRON PART ----------- //
 
-  readMeta() {
-    const meta = localStorage.getItem('metadata');
-    if (isEmpty(meta)) return {};
-    return JSONBigInt.parse(meta);
-  }
-
-  writeMeta(data) {
-    localStorage.setItem('metadata', JSONBigInt.stringify(data));
-  }
-
-  createMetaData(oldMeta, downloadPool) {
-    const sorted = downloadPool.sort((a, b) => {
-      if (moment(a.created_at).isAfter(moment(b.created_at))) return -1;
-      if (moment(a.created_at).isBefore(moment(b.created_at))) return 1;
-      return 0;
-    });
-    const oldFailedEvents = get(oldMeta, 'failedEvents', []);
-    const traversedEventIDs = get(oldMeta, 'traversedEventIds', []);
-
-    const failedEvents = filter(sorted, e => e.isFailed);
-    const downloadedEvent = filter(sorted, e => e.isDownloaded);
-
-    failedEvents.forEach((f) => {
-      if (oldFailedEvents.findIndex(o => o.id.toString() === f.id.toString()) === -1) {
-        oldFailedEvents.push(f);
-      }
-    });
-    const newFailedEvents = filter(
-      oldFailedEvents,
-      o => downloadedEvent.findIndex(d => d.id.toString() === o.id.toString()) === -1,
-    );
-
-    downloadPool.forEach((d) => {
-      if (traversedEventIDs.findIndex(id => id.toString() === d.id.toString()) === -1) {
-        traversedEventIDs.push(d.id);
-      }
-    });
-    let lastestEvent = isEmpty(oldMeta.lastestEvent) ? {} : oldMeta.lastestEvent;
-    if (!isEmpty(sorted)) {
-      if (isEmpty(oldMeta.lastestEventTime)) {
-        lastestEvent = sorted[0];
-      } else if (moment(oldMeta.lastestEventTime).isBefore(moment(sorted[0].created_at))) {
-        lastestEvent = sorted[0];
-      }
-    }
-    return {
-      hardwareId: getHardwareId(),
-      lastestEvent,
-      lastestEventTime: lastestEvent.created_at,
-      failedEvents: newFailedEvents,
-      traversedEventIds: traversedEventIDs,
-    };
-  }
-
   async runCron() {
     const cronJob = async () => {
       if (this.isCancelled) return false;
@@ -529,7 +529,7 @@ export default class SaveHistoryJob {
         this.logger(`Job run FAIL at ${moment().format('l LT')} --- ${e}`);
       }
 
-      await cancellablePromise.wrap(sleep(60000)).catch(() => {});
+      await cancellablePromise.wrap(sleep(60000)).catch(() => { });
       return cronJob();
     };
     return cronJob();

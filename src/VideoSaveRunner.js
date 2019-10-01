@@ -235,37 +235,43 @@ export default class SaveHistoryJob {
         };
 
         const rejectFileSaving = (err) => {
-          file.end();
-          deleteFile();
-          reject(err);
+          file.close(() => {
+            deleteFile();
+            reject(err);
+          });
         };
 
         let timeout;
         const refreshTimeout = () => {
-          if (timeout !== undefined) clearTimeout(timeout);
+          if (timeout !== undefined) {
+            clearTimeout(timeout);
+          }
+
           timeout = setTimeout(() => {
             rejectFileSaving(new Error(`Timeout on ${videoStreamByteUrl}`));
           }, 10000);
         };
 
-        refreshTimeout();
         response.data.pipe(file);
         response.data.on('data', () => {
-          refreshTimeout();
           if (this.isCancelled) {
             clearTimeout(timeout);
             rejectFileSaving(new Error('Cancelled'));
+            return;
           }
+          refreshTimeout();
         });
         response.data.on('end', () => {
           clearTimeout(timeout);
+          file.close(() => { resolve(1); });
           this.logger(`Save file ${fileName} to ${dirPath} SUCCESSFUL`);
-          file.close(() => resolve(1));
         });
         response.data.on('error', (err) => {
           clearTimeout(timeout);
           rejectFileSaving(err);
         });
+
+        refreshTimeout();
       }).catch(err => reject(err));
     }).catch((err) => {
       this.logger(`Save file ${fileName} to ${dirPath} FAIL`);

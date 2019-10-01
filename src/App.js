@@ -16,11 +16,11 @@ function startingAppCheck() {
   let previousVersion = localStorage.getItem('runningVersion');
   if (isEmpty(previousVersion)) previousVersion = '0.0.0';
 
-  if (appVersion === '0.1.3' && semver.gt(appVersion, previousVersion)) {
+  if (semver.gt('0.1.3', previousVersion)) {
     localStorage.clear();
   }
 
-  if (appVersion === '0.1.4' && semver.gt(appVersion, previousVersion)) {
+  if (semver.gt('0.1.4', previousVersion)) {
     localStorage.clear();
   }
 

@@ -173,6 +173,25 @@ export default class SaveHistoryJob {
     cancellablePromise.cancel();
   }
 
+  readFilesInDir(parentDir) {
+    const downloadedFiles = [];
+    const saveFilePathsInDir = (dirPath) => {
+      const content = fs.readdirSync(dirPath);
+      forEach(content, (childName) => {
+        const childPath = path.join(dirPath, childName);
+        if (fs.lstatSync(childPath).isDirectory()) {
+          saveFilePathsInDir(childPath);
+          return;
+        }
+        const parsed = path.parse(childPath);
+        downloadedFiles.push(path.join(parsed.dir, parsed.name));
+      });
+    };
+
+    saveFilePathsInDir(parentDir);
+    return downloadedFiles;
+  }
+
   // ---- SESSION AND TOKEN PART ----- //
 
   async login(skipCurrentToken = false) {
@@ -345,7 +364,7 @@ export default class SaveHistoryJob {
   }
 
   async createDownloadPool(history) {
-    const downloadedFiles = get(this.readMeta(), 'downloadedFiles', []);
+    const downloadedFiles = this.readFilesInDir(this.downloadLocation);
     return promiseMap(history, async (h) => {
       const downloadUrl = `https://api.ring.com/clients_api/dings/${h.id}/share/download_status`
         + '?disable_redirect=true';
@@ -421,16 +440,13 @@ export default class SaveHistoryJob {
       transformResponse: [],
     }).then((res) => {
       let parsed;
-      const data = get(res, 'data', '[]');
+      const data = get(res, 'data');
       try {
         parsed = JSONBigInt.parse(data);
       } catch (_) {
         parsed = [];
       }
-      if (remain === 0) {
-        return parsed;
-      }
-      if (some(parsed, d => get(d, 'recording.status') !== 'ready')) {
+      if (remain > 0 && some(parsed, d => get(d, 'recording.status') !== 'ready')) {
         return sleep(5000).then(() => this.getLimitHistory(earliestEventId, limit, remain - 1));
       }
       return parsed;
@@ -446,7 +462,7 @@ export default class SaveHistoryJob {
     if (moment(from).isAfter(moment(to))) return [];
 
     let earliestEventTime;
-    let earliestEventId = 0;
+    let earliestEventId;
     let totalEvents = [];
     while (moment(earliestEventTime).isAfter(moment(from))) {
       const historyEvents = await this.getLimitHistory(earliestEventId);
@@ -455,19 +471,21 @@ export default class SaveHistoryJob {
       if (isEmpty(historyEvents)) break;
       if (earliestEventTime === earliestEvent.created_at) break;
 
-      if (moment(earliestEvent.created_at).isBefore(moment(from))) {
+      earliestEventId = earliestEvent.id;
+      earliestEventTime = earliestEvent.created_at;
+
+      if (moment(earliestEventTime).isBefore(moment(from))) {
         const evts = filter(historyEvents, e => moment(e.created_at).isSameOrAfter(moment(from)));
         totalEvents = totalEvents.concat(evts);
       } else {
         totalEvents = totalEvents.concat(historyEvents);
       }
-
-      earliestEventId = earliestEvent.id;
-      earliestEventTime = earliestEvent.created_at;
     }
+
+    totalEvents = filter(totalEvents, evt => moment(evt.created_at).isSameOrBefore(moment(to)));
     this.logger(`Get history from ${moment(from).format('l LT')} `
       + `to ${moment(to).format('l LT')} sucessful`);
-    return filter(totalEvents, evt => moment(evt.created_at).isSameOrBefore(moment(to)));
+    return totalEvents;
   }
 
   // -------- NORMAL RUN PART -------- //

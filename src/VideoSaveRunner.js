@@ -124,6 +124,7 @@ export default class SaveHistoryJob {
     });
     const oldFailedEvents = get(oldMeta, 'failedEvents', []);
     const traversedEventIDs = get(oldMeta, 'traversedEventIds', []);
+    const downloadedFiles = get(oldMeta, 'downloadedFiles', []);
 
     const failedEvents = filter(sorted, e => e.isFailed);
     const downloadedEvent = filter(sorted, e => e.isDownloaded);
@@ -143,6 +144,13 @@ export default class SaveHistoryJob {
         traversedEventIDs.push(d.id);
       }
     });
+
+    downloadPool.forEach((d) => {
+      if (!d.isFailed && !d.isSkipped && downloadedFiles.indexOf(d.filePath) === -1) {
+        downloadedFiles.push(d.filePath);
+      }
+    });
+
     let lastestEvent = isEmpty(oldMeta.lastestEvent) ? {} : oldMeta.lastestEvent;
     if (!isEmpty(sorted)) {
       if (isEmpty(oldMeta.lastestEventTime)) {
@@ -156,6 +164,7 @@ export default class SaveHistoryJob {
       lastestEventTime: lastestEvent.created_at,
       failedEvents: newFailedEvents,
       traversedEventIds: traversedEventIDs,
+      downloadedFiles,
     };
   }
 
@@ -208,21 +217,24 @@ export default class SaveHistoryJob {
   // --- VIDEO STREAM PROCESS PART ---- //
 
   async saveByteStreamVideo({
-    id, createdAt, type,
-    videoStreamByteUrl,
-    dir, dirPath,
+    id, videoStreamByteUrl,
+    dir, fileName, filePath,
+    isDownloaded,
   }) {
+    if (isDownloaded) {
+      return 2;
+    }
+
     const extension = videoStreamByteUrl.match(/\.[0-9a-z]+?(?=\?)/i)[0];
-    const fileName = `${moment(createdAt).format('YYYY-MM-DD_HH-mm-ss')}_${type}${extension}`;
-    const dest = path.join(dir, fileName);
+    const fileNameWithExt = `${fileName}${extension}`;
+    const dest = `${filePath}${extension}`;
     return cancellablePromise.run((resolve, reject) => {
       if (fs.existsSync(dest)) {
-        this.logger(`${fileName} in ${dirPath} exist. Skipping ...`);
         resolve(2);
         return;
       }
 
-      this.logger(`Saving event ${id} to file ${fileName} in ${dirPath}`);
+      this.logger(`Saving event ${id} to file ${fileNameWithExt} in ${dir}`);
       this.fetcher({
         url: videoStreamByteUrl,
         method: 'GET',
@@ -264,7 +276,7 @@ export default class SaveHistoryJob {
         response.data.on('end', () => {
           clearTimeout(timeout);
           file.close(() => { resolve(1); });
-          this.logger(`Save file ${fileName} to ${dirPath} SUCCESSFUL`);
+          this.logger(`Save file ${fileNameWithExt} to ${dir} SUCCESSFUL`);
         });
         response.data.on('error', (err) => {
           clearTimeout(timeout);
@@ -274,7 +286,7 @@ export default class SaveHistoryJob {
         refreshTimeout();
       }).catch(err => reject(err));
     }).catch((err) => {
-      this.logger(`Save file ${fileName} to ${dirPath} FAIL`);
+      this.logger(`Save file ${fileNameWithExt} to ${dir} FAIL`);
       throw err;
     });
   }
@@ -286,34 +298,6 @@ export default class SaveHistoryJob {
       method: 'GET',
     }).then(res => get(res, 'data.url')).catch((err) => {
       throw err;
-    });
-  }
-
-  async updateDownloadPool(downloadPools, remain = 10) {
-    return cancellablePromise.wrap(promiseMap(downloadPools, async (p) => {
-      if (p.isFailed || p.isReady) return p;
-
-      let isFailed = false;
-      const videoStreamByteUrl = await this.getVideoStreamByteUrl(p.downloadUrl).catch(() => {
-        isFailed = true;
-      });
-      return {
-        ...p,
-        videoStreamByteUrl,
-        isReady: !isEmpty(videoStreamByteUrl) && !isFailed,
-        isFailed,
-      };
-    })).then((res) => {
-      if (every(res, r => r.isReady || r.isFailed)) {
-        return res;
-      }
-      if (remain === 0) {
-        return res.map((r) => {
-          if (r.isReady || r.isFailed) return r;
-          return { ...r, isFailed: true };
-        });
-      }
-      return sleep(3000).then(() => this.updateDownloadPool(downloadPools, remain - 1));
     });
   }
 
@@ -331,31 +315,71 @@ export default class SaveHistoryJob {
     });
   }
 
-  async downloadHistoryVideos(history) {
-    this.logger('Start downloading history videos');
-    let downloadPool = await promiseMap(history, async (h) => {
+  async updateDownloadPool(downloadPools, remain = 10) {
+    const isEventMetaDone = event => event.isReady || event.isDownloaded || event.isFailed;
+    return cancellablePromise.wrap(promiseMap(downloadPools, async (p) => {
+      if (isEventMetaDone(p)) return p;
+
+      let isFailed = false;
+      const videoStreamByteUrl = await this.getVideoStreamByteUrl(p.downloadUrl).catch(() => {
+        isFailed = true;
+      });
+      return {
+        ...p,
+        videoStreamByteUrl,
+        isReady: !isEmpty(videoStreamByteUrl) && !isFailed,
+        isFailed,
+      };
+    })).then((res) => {
+      if (every(res, r => isEventMetaDone(r))) {
+        return res;
+      }
+      if (remain === 0) {
+        return res.map((r) => {
+          if (isEventMetaDone(r)) return r;
+          return { ...r, isFailed: true };
+        });
+      }
+      return sleep(3000).then(() => this.updateDownloadPool(downloadPools, remain - 1));
+    });
+  }
+
+  async createDownloadPool(history) {
+    const downloadedFiles = get(this.readMeta(), 'downloadedFiles', []);
+    return promiseMap(history, async (h) => {
       const downloadUrl = `https://api.ring.com/clients_api/dings/${h.id}/share/download_status`
         + '?disable_redirect=true';
       const videoStreamByteUrl = await this.getVideoStreamByteUrl(downloadUrl);
-      const dirPath = get(h, 'doorbot.description', 'Unnamed Device');
+      const dir = get(h, 'doorbot.description', 'Unnamed Device');
+      const dirPath = path.join(this.downloadLocation, dir);
+      const fileName = `${moment(h.created_at).format('YYYY-MM-DD_HH-mm-ss')}_${h.kind}`;
+      const filePath = path.join(dirPath, fileName);
+      const isDownloaded = downloadedFiles.indexOf(filePath) !== -1;
       return {
         ...h,
-        createdAt: h.created_at,
-        type: h.kind,
         downloadUrl,
         videoStreamByteUrl,
-        isReady: !isEmpty(videoStreamByteUrl),
-        isFailed: false,
-        isDownloaded: false,
-        isSkipped: false,
-        dir: path.join(this.downloadLocation, dirPath),
+        dir,
         dirPath,
+        fileName,
+        filePath,
+        isReady: !isEmpty(videoStreamByteUrl),
+        isDownloaded,
+        isSkipped: isDownloaded,
+        isFailed: false,
       };
     });
+  }
+
+  async downloadHistoryVideos(history) {
+    this.logger('Start downloading history videos');
+    let downloadPool = await this.createDownloadPool(history);
 
     await promiseAllWithLimit(map(
       downloadPool,
-      p => (p.isReady ? () => Promise.resolve() : () => this.triggerServerRender(p.id)),
+      p => (p.isReady || p.isDownloaded
+        ? () => Promise.resolve()
+        : () => this.triggerServerRender(p.id)),
     ));
 
     downloadPool = await this.updateDownloadPool(downloadPool);

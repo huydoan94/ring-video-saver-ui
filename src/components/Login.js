@@ -43,9 +43,9 @@ function LoginForm({
     }
   };
 
-  const triggerResendCountdown = () => {
+  const triggerResendCountdown = (retryAfter) => {
     clearResendCountdown();
-    setResendRemain(30);
+    setResendRemain(retryAfter);
     resendCountInterval = setInterval(() => {
       setResendRemain((oldC => oldC - 1));
     }, 1000);
@@ -72,12 +72,12 @@ function LoginForm({
       history.push(paths.dashboard);
     }
 
-    let message = get(error, 'response.data.error');
-    message = typeof message === 'string' ? message : '';
+    const message = get(error, 'response.data.error', '');
+    const retryAfter = get(error, 'response.data.next_time_in_secs', resendRemain);
     const errorStatus = get(error, 'response.status', 400);
     if (errorStatus === 412 || (errorStatus === 400 && message.startsWith('Verification Code'))) {
       setIs2faRequired(true);
-      triggerResendCountdown();
+      triggerResendCountdown(retryAfter);
     }
   }, [accessToken, error]);
 

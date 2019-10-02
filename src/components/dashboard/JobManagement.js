@@ -9,15 +9,13 @@ import {
 } from 'lodash';
 import cx from 'classnames';
 
-import { electron, electronImport } from '../../utils/electron';
+import { electron } from '../../utils/electron';
 import userstorage from '../../utils/userstorage';
+import { DEFAULT_HOME_DIR } from '../../constants';
+
 import VideoSaveRunner from '../../VideoSaveRunner';
 import styles from './JobManagement.module.scss';
 
-const platformFolders = electronImport('platform-folders');
-const path = electronImport('path');
-
-const defaultHomeDir = path.join(platformFolders.getDocumentsFolder(), 'Ring Video Saver');
 const dateFormat = 'MMM DD, YYYY';
 const jobTypeMap = {
   auto: 'auto',
@@ -50,8 +48,7 @@ export default function JobManagement() {
 
   useEffect(() => {
     if (isEmpty(downloadLocation)) {
-      const homedir = defaultHomeDir;
-      changeDownloadLocation(homedir);
+      changeDownloadLocation(DEFAULT_HOME_DIR);
     }
 
     return () => {

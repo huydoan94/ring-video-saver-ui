@@ -385,8 +385,8 @@ export default class SaveHistoryJob {
     downloadPool = await this.updateDownloadPool(downloadPool);
 
     const dirs = reduce(downloadPool, (acc, d) => {
-      if (acc.indexOf(d.dir) !== -1) return acc;
-      return [d.dir, ...acc];
+      if (acc.indexOf(d.dirPath) !== -1) return acc;
+      return [d.dirPath, ...acc];
     }, []);
     await createDirs(dirs);
 

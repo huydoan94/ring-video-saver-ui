@@ -53,10 +53,9 @@ function LoginForm({
 
   useEffect(() => {
     const isRemember = localStorage.getItem('isRemember');
-    if (!isRemember) {
+    if (isRemember === 'false') {
       logout();
-    }
-    if (isAuthenticated() && isRemember) {
+    } else if (isAuthenticated()) {
       history.push(paths.dashboard);
     }
     return () => {

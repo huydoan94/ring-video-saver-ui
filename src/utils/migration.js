@@ -59,6 +59,16 @@ const migrationDefs = {
     metadata = { ...metadata, downloadedFiles };
     userstorage.setItem('metadata', JSONBigInt.stringify(metadata));
   },
+  '0.1.8': () => {
+    const keys = Object.keys(localStorage);
+    forEach(keys, (key) => {
+      if (key.indexOf('-data') === -1) return;
+
+      const newKey = key.replace('-data', '_data');
+      localStorage.setItem(newKey, localStorage.getItem(key));
+      localStorage.removeItem(key);
+    });
+  },
 };
 
 export default (currentVersion, previousVersion) => {

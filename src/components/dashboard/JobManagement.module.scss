@@ -48,11 +48,15 @@
 
 .manualContainer {
   &Button {
-    width: calc(100% - 8px);
+    width                    : 100%;
+    border-top-left-radius   : 0;
+    border-bottom-left-radius: 0;
   }
 
   &DateSelect {
-    width: 100%
+    width                     : 100%;
+    border-top-right-radius   : 0;
+    border-bottom-right-radius: 0;
   }
 
   &Actions {

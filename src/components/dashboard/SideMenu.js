@@ -6,6 +6,7 @@ import styles from './SideMenu.module.scss';
 
 export const menus = {
   jobManagement: 'job-management',
+  browseVideo: 'browse-video',
 };
 
 export default function SideMenu({ currentMenu, onMenuClick }) {
@@ -19,6 +20,10 @@ export default function SideMenu({ currentMenu, onMenuClick }) {
       <Menu.Item key={menus.jobManagement}>
         <Icon type="pie-chart" />
         <span>Job Management</span>
+      </Menu.Item>
+      <Menu.Item key={menus.browseVideo}>
+        <Icon type="database" />
+        <span>Browse Video</span>
       </Menu.Item>
     </Menu>
   );

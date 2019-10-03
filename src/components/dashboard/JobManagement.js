@@ -235,7 +235,7 @@ export default function JobManagement() {
             </Typography.Paragraph>
           </Row>
           <Row className={styles.manualContainerActions}>
-            <Col md={16}>
+            <Col xs={17}>
               <DatePicker.RangePicker
                 value={selectedRange}
                 format={dateFormat}
@@ -245,7 +245,7 @@ export default function JobManagement() {
                 className={styles.manualContainerDateSelect}
               />
             </Col>
-            <Col md={7}>
+            <Col xs={7}>
               <Button
                 type="primary"
                 className={styles.manualContainerButton}

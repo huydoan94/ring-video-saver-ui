@@ -5,6 +5,10 @@
   padding         : 22px 0 !important;
   text-align      : center;
 
+  &Collapsed i {
+    margin: 0 !important;
+  }
+
   >h4 {
     color        : white;
     margin-bottom: 0;

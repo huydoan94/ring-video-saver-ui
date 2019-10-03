@@ -550,8 +550,9 @@ export default class SaveHistoryJob {
           let newEvents = [];
           const lastestEvent = (await this.getLimitHistory(undefined, 1))[0];
           if (moment(lastestEvent.created_at).isAfter(meta.lastestEventTime)) {
+            const shiftedEventTime = moment(meta.lastestEventTime).add(1, 'millisecond').format();
             newEvents = await this.downloadHistoryVideos(
-              await this.getHistory(meta.lastestEventTime),
+              await this.getHistory(shiftedEventTime),
             );
           }
 

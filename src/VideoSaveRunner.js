@@ -455,7 +455,7 @@ export default class SaveHistoryJob {
     });
   }
 
-  async getHistory(from, to) {
+  async getHistory(from, to, excludeId) {
     this.logger(`Geting history from ${moment(from).format('l LT')} `
       + `to ${moment(to).format('l LT')}`);
     if (isEmpty(from)) return [];
@@ -482,7 +482,11 @@ export default class SaveHistoryJob {
       }
     }
 
-    totalEvents = filter(totalEvents, evt => moment(evt.created_at).isSameOrBefore(moment(to)));
+    totalEvents = filter(
+      totalEvents,
+      evt => moment(evt.created_at).isSameOrBefore(moment(to))
+        && (isNil(excludeId) || evt.id.toString() !== excludeId.toString()),
+    );
     this.logger(`Get history from ${moment(from).format('l LT')} `
       + `to ${moment(to).format('l LT')} sucessful`);
     return totalEvents;
@@ -550,9 +554,8 @@ export default class SaveHistoryJob {
           let newEvents = [];
           const lastestEvent = (await this.getLimitHistory(undefined, 1))[0];
           if (moment(lastestEvent.created_at).isAfter(meta.lastestEventTime)) {
-            const shiftedEventTime = moment(meta.lastestEventTime).add(1, 'millisecond').format();
             newEvents = await this.downloadHistoryVideos(
-              await this.getHistory(shiftedEventTime),
+              await this.getHistory(meta.lastestEventTime, undefined, get(meta, 'lastestEvent.id')),
             );
           }
 

@@ -5,7 +5,7 @@
 import moment from 'moment';
 import {
   get, filter, map, reduce, every,
-  some, forEach, isNil, isEmpty, last,
+  forEach, isNil, isEmpty, last,
 } from 'lodash';
 import JSONBigInt from 'json-bigint';
 import autoBind from 'auto-bind';

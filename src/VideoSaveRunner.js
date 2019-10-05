@@ -403,7 +403,7 @@ export default class SaveHistoryJob {
 
     await promiseAllWithLimit(map(
       downloadPool,
-      p => (p.isReady || p.isDownloaded || !p.isFailed
+      p => (p.isReady || p.isDownloaded || p.isFailed
         ? () => Promise.resolve()
         : () => this.triggerServerRender(p.id)),
     ), 20);

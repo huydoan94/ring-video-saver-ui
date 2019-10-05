@@ -238,10 +238,12 @@ export default class SaveHistoryJob {
   async saveByteStreamVideo({
     id, videoStreamByteUrl,
     dir, fileName, filePath,
-    isDownloaded,
+    isDownloaded, isFailed,
   }) {
     if (isDownloaded) {
       return 2;
+    } if (isFailed) {
+      throw new Error('Event video not ready !');
     }
 
     const extension = videoStreamByteUrl.match(/\.[0-9a-z]+?(?=\?)/i)[0];
@@ -273,11 +275,13 @@ export default class SaveHistoryJob {
         };
 
         let timeout;
+        const clearDataTimeout = () => {
+          if (timeout === undefined) return;
+          clearTimeout(timeout);
+          timeout = undefined;
+        };
         const refreshTimeout = () => {
-          if (timeout !== undefined) {
-            clearTimeout(timeout);
-          }
-
+          clearDataTimeout();
           timeout = setTimeout(() => {
             rejectFileSaving(new Error(`Timeout on ${videoStreamByteUrl}`));
           }, 10000);
@@ -286,19 +290,21 @@ export default class SaveHistoryJob {
         response.data.pipe(file);
         response.data.on('data', () => {
           if (this.isCancelled) {
-            clearTimeout(timeout);
+            clearDataTimeout();
             rejectFileSaving(new Error('Cancelled'));
             return;
           }
           refreshTimeout();
         });
         response.data.on('end', () => {
-          clearTimeout(timeout);
-          file.close(() => { resolve(1); });
-          this.logger(`Save file ${fileNameWithExt} to ${dir} SUCCESSFUL`);
+          clearDataTimeout();
+          file.close(() => {
+            this.logger(`Save file ${fileNameWithExt} to ${dir} SUCCESSFUL`);
+            resolve(1);
+          });
         });
         response.data.on('error', (err) => {
-          clearTimeout(timeout);
+          clearDataTimeout();
           rejectFileSaving(err);
         });
 
@@ -374,6 +380,7 @@ export default class SaveHistoryJob {
       const fileName = `${moment(h.created_at).format('YYYY-MM-DD_HH-mm-ss')}_${h.kind}`;
       const filePath = path.join(dirPath, fileName);
       const isDownloaded = downloadedFiles.indexOf(filePath) !== -1;
+      const isFailed = get(h, 'recording.status') !== 'ready';
       return {
         ...h,
         downloadUrl,
@@ -385,7 +392,7 @@ export default class SaveHistoryJob {
         isReady: !isEmpty(videoStreamByteUrl),
         isDownloaded,
         isSkipped: isDownloaded,
-        isFailed: false,
+        isFailed,
       };
     });
   }
@@ -396,10 +403,10 @@ export default class SaveHistoryJob {
 
     await promiseAllWithLimit(map(
       downloadPool,
-      p => (p.isReady || p.isDownloaded
+      p => (p.isReady || p.isDownloaded || !p.isFailed
         ? () => Promise.resolve()
         : () => this.triggerServerRender(p.id)),
-    ));
+    ), 20);
 
     downloadPool = await this.updateDownloadPool(downloadPool);
 
@@ -432,24 +439,19 @@ export default class SaveHistoryJob {
 
   // --------- HISTORY PART ---------- //
 
-  async getLimitHistory(earliestEventId, limit = 50, remain = 5) {
+  async getLimitHistory(earliestEventId, limit = 50) {
     return this.fetcher({
       url: 'https://api.ring.com/clients_api/doorbots/history'
         + `?limit=${limit}${isNil(earliestEventId) ? '' : `&older_than=${earliestEventId}`}`,
       method: 'GET',
       transformResponse: [],
     }).then((res) => {
-      let parsed;
-      const data = get(res, 'data');
       try {
-        parsed = JSONBigInt.parse(data);
+        const data = get(res, 'data');
+        return JSONBigInt.parse(data);
       } catch (_) {
-        parsed = [];
+        return [];
       }
-      if (remain > 0 && some(parsed, d => get(d, 'recording.status') !== 'ready')) {
-        return sleep(5000).then(() => this.getLimitHistory(earliestEventId, limit, remain - 1));
-      }
-      return parsed;
     }).catch((err) => {
       throw err;
     });

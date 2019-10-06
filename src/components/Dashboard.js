@@ -18,7 +18,7 @@ const menuComponents = {
 };
 
 function Dashboard({ history, paths }) {
-  const [currentPage, setCurrentPage] = useState(menus.jobManagement);
+  const [currentPage, setCurrentPage] = useState(menus.browseVideo);
   const [isCollapseMenu, setIsCollapseMenu] = useState(true);
   const MenuComponent = menuComponents[currentPage];
 

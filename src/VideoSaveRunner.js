@@ -20,6 +20,7 @@ import { electronImport } from './utils/electron';
 import CancellablePromise from './utils/cancellablePromise';
 import createDirs from './utils/createDirs';
 import userstorage from './utils/userstorage';
+import readFilesInDir from './utils/readFilesInDir';
 import { loginUseToken, createSession } from './components/Login.services';
 
 const fs = electronImport('fs');
@@ -171,25 +172,6 @@ export default class SaveHistoryJob {
   cancel() {
     this.isCancelled = true;
     cancellablePromise.cancel();
-  }
-
-  readFilesInDir(parentDir) {
-    const downloadedFiles = [];
-    const saveFilePathsInDir = (dirPath) => {
-      const content = fs.readdirSync(dirPath);
-      forEach(content, (childName) => {
-        const childPath = path.join(dirPath, childName);
-        if (fs.lstatSync(childPath).isDirectory()) {
-          saveFilePathsInDir(childPath);
-          return;
-        }
-        const parsed = path.parse(childPath);
-        downloadedFiles.push(path.join(parsed.dir, parsed.name));
-      });
-    };
-
-    saveFilePathsInDir(parentDir);
-    return downloadedFiles;
   }
 
   // ---- SESSION AND TOKEN PART ----- //
@@ -370,7 +352,7 @@ export default class SaveHistoryJob {
   }
 
   async createDownloadPool(history) {
-    const downloadedFiles = this.readFilesInDir(this.downloadLocation);
+    const downloadedFiles = await readFilesInDir(this.downloadLocation);
     return promiseMap(history, async (h) => {
       const downloadUrl = `https://api.ring.com/clients_api/dings/${h.id}/share/download_status`
         + '?disable_redirect=true';

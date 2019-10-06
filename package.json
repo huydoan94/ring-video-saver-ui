@@ -12,7 +12,7 @@
     "postinstall": "electron-builder install-app-deps && \"./node_modules/.bin/electron-rebuild\"",
     "preelectron-pack": "yarn build-ui",
     "electron-pack": "electron-builder -w",
-    "electron-dev": "concurrently \"set BROWSER=none && yarn start-ui\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron-dev": "concurrently \"set BROWSER=none && yarn start-ui\" \"wait-on http://localhost:3000 && electron electronMain.js\"",
     "start-ui": "react-scripts start",
     "build-ui": "react-scripts build",
     "test-ui": "react-scripts test",

@@ -1,7 +1,7 @@
 const electron = require('electron');
 const path = require('path');
 const isDev = require('electron-is-dev');
-const os = require('os');
+const ipcHelpers = require('./electronIPCHelpers');
 
 const { app, BrowserWindow, Menu } = electron;
 let mainWindow;
@@ -22,7 +22,6 @@ function createWindow() {
         label: app.getName(),
         submenu: [{ role: 'about' }, { type: 'separator' }, { role: 'hide' }, { role: 'quit' }],
       },
-
     ];
 
     Menu.setApplicationMenu(Menu.buildFromTemplate(template));
@@ -35,6 +34,8 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
   }
   mainWindow.on('closed', () => { mainWindow = null; });
+
+  ipcHelpers();
 }
 
 app.on('ready', createWindow);

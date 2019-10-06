@@ -1,4 +1,4 @@
-appId: "com.ring-video-saver.ui"
+appId: "com.electron.${name}"
 productName: "Ring Video Saver"
 copyright: "Copyright © 2019 ${author}"
 

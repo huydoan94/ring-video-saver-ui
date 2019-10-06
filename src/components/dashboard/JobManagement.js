@@ -5,7 +5,7 @@ import {
 } from 'antd';
 import moment from 'moment';
 import {
-  isEmpty, map, debounce, get,
+  isEmpty, map, debounce, get, isNil,
 } from 'lodash';
 import cx from 'classnames';
 
@@ -52,7 +52,10 @@ export default function JobManagement() {
     }
 
     return () => {
-      clearInterval(runTimeInterval);
+      if (runTimeInterval !== undefined) {
+        clearInterval(runTimeInterval);
+        runTimeInterval = undefined;
+      }
       if (!isEmpty(runner)) runner.cancel();
       runner = null;
     };
@@ -94,6 +97,7 @@ export default function JobManagement() {
     setIsRunning(false);
     setStatus(oldStatus => ({ ...oldStatus, autoStatus: statusMap.notRunning }));
     clearInterval(runTimeInterval);
+    runTimeInterval = undefined;
   };
 
   const startAutoJob = () => {
@@ -228,7 +232,7 @@ export default function JobManagement() {
             <Typography.Paragraph>
               Last run:
               {' '}
-              {status.manualLastRunTime === null
+              {isNil(status.manualLastRunTime)
                 ? null
                 : moment(status.manualLastRunTime).format('MMM DD, YYYY HH:mm:ss')
               }

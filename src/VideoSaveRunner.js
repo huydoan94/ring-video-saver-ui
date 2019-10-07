@@ -128,7 +128,7 @@ export default class SaveHistoryJob {
     const downloadedFiles = get(oldMeta, 'downloadedFiles', []);
 
     const failedEvents = filter(sorted, e => e.isFailed);
-    const downloadedEvent = filter(sorted, e => e.isDownloaded);
+    const downloadedEvent = filter(sorted, e => e.isDownloaded || e.isSkipped);
 
     failedEvents.forEach((f) => {
       if (oldFailedEvents.findIndex(o => o.id.toString() === f.id.toString()) === -1) {

@@ -351,20 +351,27 @@ export default class SaveHistoryJob {
     });
   }
 
-  async createDownloadPool(history) {
+  async createDownloadPool(histories) {
     const downloadedFiles = await readFilesInDir(this.downloadLocation);
-    return promiseMap(history, async (h) => {
-      const downloadUrl = `https://api.ring.com/clients_api/dings/${h.id}/share/download_status`
+    return promiseMap(histories, async (h) => {
+      let history = h;
+      let isVideoReady = get(history, 'recording.status') === 'ready';
+      if (!isVideoReady) {
+        await sleep(3000);
+        history = await this.getLimitHistory(undefined, history.id, 1);
+        history = get(history, '0', h);
+        isVideoReady = get(history, 'recording.status') === 'ready';
+      }
+      const downloadUrl = `https://api.ring.com/clients_api/dings/${history.id}/share/download_status`
         + '?disable_redirect=true';
       const videoStreamByteUrl = await this.getVideoStreamByteUrl(downloadUrl);
-      const dir = get(h, 'doorbot.description', 'Unnamed Device');
+      const dir = get(history, 'doorbot.description', 'Unnamed Device');
       const dirPath = path.join(this.downloadLocation, dir);
-      const fileName = `${moment(h.created_at).format('YYYY-MM-DD_HH-mm-ss')}_${h.kind}`;
+      const fileName = `${moment(history.created_at).format('YYYY-MM-DD_HH-mm-ss')}_${history.kind}`;
       const filePath = path.join(dirPath, fileName);
       const isDownloaded = downloadedFiles.indexOf(filePath) !== -1;
-      const isFailed = get(h, 'recording.status') !== 'ready';
       return {
-        ...h,
+        ...history,
         downloadUrl,
         videoStreamByteUrl,
         dir,
@@ -374,7 +381,7 @@ export default class SaveHistoryJob {
         isReady: !isEmpty(videoStreamByteUrl),
         isDownloaded,
         isSkipped: isDownloaded,
-        isFailed,
+        isFailed: !isVideoReady,
       };
     });
   }
@@ -421,10 +428,12 @@ export default class SaveHistoryJob {
 
   // --------- HISTORY PART ---------- //
 
-  async getLimitHistory(earliestEventId, limit = 50) {
+  async getLimitHistory(olderThan, atId, limit = 50) {
     return this.fetcher({
       url: 'https://api.ring.com/clients_api/doorbots/history'
-        + `?limit=${limit}${isNil(earliestEventId) ? '' : `&older_than=${earliestEventId}`}`,
+        + `?limit=${limit}`
+        + `${isNil(olderThan) ? '' : `&older_than=${olderThan}`}`
+        + `${isNil(atId) ? '' : `&id=${atId}`}`,
       method: 'GET',
       transformResponse: [],
     }).then((res) => {
@@ -536,8 +545,8 @@ export default class SaveHistoryJob {
           }
 
           let newEvents = [];
-          const lastestEvent = (await this.getLimitHistory(undefined, 1))[0];
-          if (moment(lastestEvent.created_at).isAfter(meta.lastestEventTime)) {
+          const lastestEvent = (await this.getLimitHistory(undefined, undefined, 1))[0];
+          if (!isEmpty(lastestEvent) && moment(lastestEvent.created_at).isAfter(meta.lastestEventTime)) {
             newEvents = await this.downloadHistoryVideos(
               await this.getHistory(meta.lastestEventTime, undefined, get(meta, 'lastestEvent.id')),
             );

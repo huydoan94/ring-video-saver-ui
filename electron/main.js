@@ -1,11 +1,11 @@
 const electron = require('electron');
 const path = require('path');
 const isDev = require('electron-is-dev');
-const ipcHelpers = require('./electronIPCHelpers');
+const ipcHelpers = require('./ipcHelpers');
 
 const { app, BrowserWindow, Menu } = electron;
-let mainWindow;
 
+let mainWindow;
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 992,

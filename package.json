@@ -1,18 +1,18 @@
 {
   "name": "ring-video-saver-ui",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "private": true,
   "author": {
     "name": "Huy Doan",
     "email": "danghuy1994@gmail.com"
   },
   "homepage": "./",
-  "main": "public/electron.js",
+  "main": "electron/main.js",
   "scripts": {
-    "postinstall": "electron-builder install-app-deps && \"./node_modules/.bin/electron-rebuild\"",
-    "preelectron-pack": "yarn build-ui",
-    "electron-pack": "electron-builder -w",
-    "electron-dev": "concurrently \"set BROWSER=none && yarn start-ui\" \"wait-on http://localhost:3000 && electron electronMain.js\"",
+    "postinstall": "electron-builder install-app-deps",
+    "preelectron-pack": "yarn build-ui && ncp electron build",
+    "electron-pack": "electron-builder -w -c.extraMetadata.main=build/main.js",
+    "electron-dev": "concurrently \"set BROWSER=none && yarn start-ui\" \"wait-on http://localhost:3000 && electron .\"",
     "start-ui": "react-scripts start",
     "build-ui": "react-scripts build",
     "test-ui": "react-scripts test",
@@ -62,7 +62,6 @@
     "concurrently": "^4.1.2",
     "electron": "^6.0.10",
     "electron-builder": "^21.2.0",
-    "electron-rebuild": "^1.8.6",
     "enzyme": "^3.8.0",
     "enzyme-adapter-react-16": "^1.7.1",
     "enzyme-to-json": "^3.4.0",
@@ -75,6 +74,7 @@
     "eslint-plugin-jsx-a11y": "^6.1.1",
     "eslint-plugin-react": "^7.11.1",
     "eslint-watch": "^4.0.2",
+    "ncp": "^2.0.0",
     "typescript": "^3.6.3",
     "wait-on": "^3.3.0"
   }

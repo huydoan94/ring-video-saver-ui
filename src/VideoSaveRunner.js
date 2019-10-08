@@ -5,7 +5,7 @@
 import moment from 'moment';
 import {
   get, filter, map, reduce, every,
-  forEach, isNil, isEmpty, last,
+  forEach, isNil, isEmpty, last, find,
 } from 'lodash';
 import JSONBigInt from 'json-bigint';
 import autoBind from 'auto-bind';
@@ -358,8 +358,14 @@ export default class SaveHistoryJob {
       let isVideoReady = get(history, 'recording.status') === 'ready';
       if (!isVideoReady) {
         await sleep(3000);
-        history = await this.getLimitHistory(undefined, history.id, 1);
-        history = get(history, '0', h);
+        const findEvent = async fromId => this.getLimitHistory(fromId, 10).then((res) => {
+          if (isEmpty(res)) return h;
+
+          const matchedEvent = find(res, r => r.id.toString() === history.id.toString());
+          if (!isEmpty(matchedEvent)) return matchedEvent;
+          return findEvent(last(res).id);
+        });
+        history = await findEvent();
         isVideoReady = get(history, 'recording.status') === 'ready';
       }
       const downloadUrl = `https://api.ring.com/clients_api/dings/${history.id}/share/download_status`
@@ -428,12 +434,11 @@ export default class SaveHistoryJob {
 
   // --------- HISTORY PART ---------- //
 
-  async getLimitHistory(olderThan, atId, limit = 50) {
+  async getLimitHistory(olderThan, limit = 50) {
     return this.fetcher({
       url: 'https://api.ring.com/clients_api/doorbots/history'
         + `?limit=${limit}`
-        + `${isNil(olderThan) ? '' : `&older_than=${olderThan}`}`
-        + `${isNil(atId) ? '' : `&id=${atId}`}`,
+        + `${isNil(olderThan) ? '' : `&older_than=${olderThan}`}`,
       method: 'GET',
       transformResponse: [],
     }).then((res) => {
@@ -545,7 +550,7 @@ export default class SaveHistoryJob {
           }
 
           let newEvents = [];
-          const lastestEvent = (await this.getLimitHistory(undefined, undefined, 1))[0];
+          const lastestEvent = (await this.getLimitHistory(undefined, 1))[0];
           if (!isEmpty(lastestEvent) && moment(lastestEvent.created_at).isAfter(meta.lastestEventTime)) {
             newEvents = await this.downloadHistoryVideos(
               await this.getHistory(meta.lastestEventTime, undefined, get(meta, 'lastestEvent.id')),

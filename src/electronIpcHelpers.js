@@ -1,9 +1,9 @@
-const electron = require('electron');
-const fs = require('fs');
-const path = require('path');
-const forEach = require('lodash/forEach');
+import electron from 'electron';
+import fs from 'fs';
+import path from 'path';
+import forEach from 'lodash/forEach';
 
-module.exports = () => {
+export default () => {
   electron.ipcMain.on('readFilesInDirRequest', (event, parentDir, withExt = false) => {
     const downloadedFiles = [];
     const saveFilePathsInDir = (dirPath) => {

@@ -1,7 +1,7 @@
-const electron = require('electron');
-const path = require('path');
-const isDev = require('electron-is-dev');
-const ipcHelpers = require('./electronIpcHelpers');
+import electron from 'electron';
+import path from 'path';
+import isDev from 'electron-is-dev';
+import ipcHelpers from './electronIpcHelpers';
 
 const { app, BrowserWindow, Menu } = electron;
 

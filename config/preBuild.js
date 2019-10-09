@@ -19,7 +19,8 @@ const path = require('path');
 const chalk = require('react-dev-utils/chalk');
 const fs = require('fs-extra');
 const webpack = require('webpack');
-const configFactory = require('./webpack.config');
+const configFactory = require('./webpack.react.config');
+const electronConfigFactory = require('./webpack.electron.config');
 const paths = require('./paths');
 const checkRequiredFiles = require('react-dev-utils/checkRequiredFiles');
 const formatWebpackMessages = require('react-dev-utils/formatWebpackMessages');
@@ -45,6 +46,7 @@ if (!checkRequiredFiles([paths.appHtml, paths.appIndexJs])) {
 
 // Generate configuration
 const config = configFactory('production');
+const electronConfig = electronConfigFactory('production');
 
 // We require that you explicitly set browsers and do not fall back to
 // browserslist defaults.
@@ -67,20 +69,20 @@ checkBrowsers(paths.appPath, isInteractive)
   .then(
     ({ stats, previousFileSizes, warnings }) => {
       if (warnings.length) {
-        console.log(chalk.yellow('Compiled with warnings.\n'));
+        console.log(chalk.yellow('Compiled React with warnings.\n'));
         console.log(warnings.join('\n\n'));
         console.log(
           '\nSearch for the ' +
-            chalk.underline(chalk.yellow('keywords')) +
-            ' to learn more about each warning.'
+          chalk.underline(chalk.yellow('keywords')) +
+          ' to learn more about each warning.'
         );
         console.log(
           'To ignore, add ' +
-            chalk.cyan('// eslint-disable-next-line') +
-            ' to the line before.\n'
+          chalk.cyan('// eslint-disable-next-line') +
+          ' to the line before.\n'
         );
       } else {
-        console.log(chalk.green('Compiled successfully.\n'));
+        console.log(chalk.green('Compiled React successfully.\n'));
       }
 
       console.log('File sizes after gzip:\n');
@@ -93,17 +95,7 @@ checkBrowsers(paths.appPath, isInteractive)
       );
       console.log();
 
-      const appPackage = require(paths.appPackageJson);
-      const publicUrl = paths.publicUrl;
-      const publicPath = config.output.publicPath;
-      const buildFolder = path.relative(process.cwd(), paths.appBuild);
-      printHostingInstructions(
-        appPackage,
-        publicUrl,
-        publicPath,
-        buildFolder,
-        useYarn
-      );
+      return buildElectron();
     },
     err => {
       console.log(chalk.red('Failed to compile.\n'));
@@ -111,12 +103,32 @@ checkBrowsers(paths.appPath, isInteractive)
       process.exit(1);
     }
   )
+  .then(() => {
+    console.log(chalk.green('Compiled Electron App successfully.\n'));
+  })
   .catch(err => {
     if (err && err.message) {
       console.log(err.message);
     }
     process.exit(1);
   });
+
+function buildElectron() {
+  return new Promise((resolve, reject) => {
+    webpack(electronConfig, (err, stats) => {
+      if (err && err.message) {
+        return reject(err);
+      } else if (stats.hasErrors()) {
+        const messages = formatWebpackMessages(
+          stats.toJson({ all: false, warnings: true, errors: true })
+        );
+        return reject(new Error(messages.errors.join('\n\n')));
+      }
+
+      resolve();
+    })
+  })
+}
 
 // Create the production build and print the deployment instructions.
 function build(previousFileSizes) {
@@ -168,7 +180,7 @@ function build(previousFileSizes) {
         console.log(
           chalk.yellow(
             '\nTreating warnings as errors because process.env.CI = true.\n' +
-              'Most CI servers set it automatically.\n'
+            'Most CI servers set it automatically.\n'
           )
         );
         return reject(new Error(messages.warnings.join('\n\n')));

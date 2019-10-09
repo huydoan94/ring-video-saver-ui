@@ -21,15 +21,18 @@ const webpack = require('webpack');
 const WebpackDevServer = require('webpack-dev-server');
 const clearConsole = require('react-dev-utils/clearConsole');
 const checkRequiredFiles = require('react-dev-utils/checkRequiredFiles');
+const formatWebpackMessages = require('react-dev-utils/formatWebpackMessages');
 const {
   choosePort,
   createCompiler,
   prepareProxy,
   prepareUrls,
 } = require('react-dev-utils/WebpackDevServerUtils');
+const { exec } = require('child_process');
 const paths = require('./paths');
-const configFactory = require('./webpack.config');
-const createDevServerConfig = require('./webpackDevServer.config');
+const configFactory = require('./webpack.react.config');
+const electronConfigFactory = require('./webpack.electron.config');
+const createDevServerConfig = require('./webpackDevServer.react.config');
 
 const useYarn = fs.existsSync(paths.yarnLockFile);
 const isInteractive = process.stdout.isTTY;
@@ -126,10 +129,34 @@ checkBrowsers(paths.appPath, isInteractive)
       }
 
       console.log(chalk.cyan('Starting the development server...\n'));
+
+      console.log(chalk.cyan('Compiling Electron App\n'));
+      webpack(electronConfigFactory('development'), (err, stats) => {
+        if (err || stats.hasErrors()) {
+          console.error("Can't compile Electron App");
+          const messages = formatWebpackMessages(
+            stats.toJson({ all: false, warnings: true, errors: true })
+          );
+          console.error(messages);
+          devServer.close();
+          process.exit(1);
+          return;
+        }
+
+        console.log(chalk.cyan('Compiled Electron App\n'));
+        exec('electron build/electronMain.js', err => {
+          devServer.close();
+          if (err) {
+            process.exit(1);
+            return;
+          }
+          process.exit();
+        })
+      })
     });
 
-    ['SIGINT', 'SIGTERM'].forEach(function(sig) {
-      process.on(sig, function() {
+    ['SIGINT', 'SIGTERM'].forEach(function (sig) {
+      process.on(sig, function () {
         devServer.close();
         process.exit();
       });

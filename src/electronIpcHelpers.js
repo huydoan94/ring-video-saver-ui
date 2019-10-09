@@ -1,25 +1,53 @@
 import electron from 'electron';
 import fs from 'fs';
 import path from 'path';
-import forEach from 'lodash/forEach';
+import { map } from 'lodash';
+
+import promiseAllWithLimit from './utils/promiseAllWithLimit';
 
 export default () => {
   electron.ipcMain.on('readFilesInDirRequest', (event, parentDir, withExt = false) => {
-    const downloadedFiles = [];
-    const saveFilePathsInDir = (dirPath) => {
-      const content = fs.readdirSync(dirPath);
-      forEach(content, (childName) => {
-        const childPath = path.join(dirPath, childName);
-        if (fs.lstatSync(childPath).isDirectory()) {
-          saveFilePathsInDir(childPath);
+    const walk = (dir, done) => {
+      let results = [];
+      fs.readdir(dir, (err, list) => {
+        if (err) {
+          done(err);
           return;
         }
-        const parsed = path.parse(childPath);
-        downloadedFiles.push(path.join(parsed.dir, `${parsed.name}${withExt ? parsed.ext : ''}`));
+
+        let pending = list.length;
+        if (pending <= 0) {
+          done(null, results);
+          return;
+        }
+
+        const runners = map(list, fileName => async () => {
+          const file = path.resolve(dir, fileName);
+          fs.stat(file, (_, stat) => {
+            if (stat && stat.isDirectory()) {
+              walk(file, (_2, res) => {
+                results = results.concat(res);
+                pending -= 1;
+                if (pending <= 0) done(null, results);
+              });
+            } else {
+              const parsed = path.parse(file);
+              results.push(path.join(parsed.dir, `${parsed.name}${withExt ? parsed.ext : ''}`));
+              pending -= 1;
+              if (pending <= 0) done(null, results);
+            }
+          });
+        });
+        promiseAllWithLimit(runners, 100);
       });
     };
 
-    saveFilePathsInDir(parentDir);
-    event.reply('readFilesInDirResponse', downloadedFiles);
+    walk(parentDir, (err, results) => {
+      if (err) {
+        event.reply('readFilesInDirResponse', []);
+        return;
+      }
+      event.reply('readFilesInDirResponse', results);
+    });
   });
 };

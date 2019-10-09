@@ -2,7 +2,7 @@ appId: "com.electron.ring-video-saver-ui"
 productName: "Ring Video Saver"
 copyright: "Copyright © 2019 ${author}"
 
-files: ["build/**/*", "node_modules/**/*"]
+files: ["src/**/*", "build/**/*", "node_modules/**/*"]
 directories:
   buildResources: "assets"
 

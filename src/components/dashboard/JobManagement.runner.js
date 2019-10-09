@@ -21,27 +21,12 @@ import CancellablePromise from '../../utils/cancellablePromise';
 import createDirs from '../../utils/createDirs';
 import userstorage from '../../utils/userstorage';
 import readFilesInDir from '../../utils/readFilesInDir';
+import axios, { electronAxios } from '../../utils/axios';
 import { loginUseToken, createSession } from '../Login.services';
 
 const fs = electronImport('fs');
 const path = electronImport('path');
-const libaxios = electronImport('axios');
 const platformFolders = electronImport('platform-folders');
-
-async function axios(...params) {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error('Timeout !!!'));
-    }, 60000);
-    libaxios(...params).then((res) => {
-      clearTimeout(timeout);
-      resolve(res);
-    }).catch((err) => {
-      clearTimeout(timeout);
-      reject(err);
-    });
-  });
-}
 
 let cancellablePromise;
 const statusMap = {
@@ -85,6 +70,7 @@ export default class SaveHistoryJob {
     const [firstParam, ...others] = params;
     let url = get(firstParam, 'url', '');
     const attachVersionAndToken = get(firstParam, 'attachVersionAndToken', true);
+    const useAppAxios = get(firstParam, 'useAppAxios', false);
     if (attachVersionAndToken && url.indexOf('api_version') === -1) {
       url = `${url}${url.indexOf('?') === -1 ? `?api_version=${API_VERSION}` : `&api_version=${API_VERSION}`}`;
     }
@@ -97,9 +83,11 @@ export default class SaveHistoryJob {
       headers = { ...headers, hardware_id: getHardwareId() };
     }
     const modParams = [{
-      ...firstParam, url, headers, attachVersionAndToken: undefined,
+      ...firstParam, url, headers, attachVersionAndToken: undefined, useAppAxios: undefined,
     }, ...others];
-    return cancellablePromise.wrap(promiseFetchWithRetry(axios, ...modParams)).catch((err) => {
+    return cancellablePromise.wrap(
+      promiseFetchWithRetry(useAppAxios ? electronAxios : axios, ...modParams),
+    ).catch((err) => {
       if (get(err, 'response.status') === 401 && attachVersionAndToken) {
         return this.getSession(true).then(() => this.fetcher(...params));
       }
@@ -243,6 +231,7 @@ export default class SaveHistoryJob {
         method: 'GET',
         responseType: 'stream',
         attachVersionAndToken: false,
+        useAppAxios: true,
       }).then((response) => {
         const file = fs.createWriteStream(dest, { flag: 'w' });
         const deleteFile = () => {
@@ -299,9 +288,10 @@ export default class SaveHistoryJob {
   }
 
 
-  async getVideoStreamByteUrl(downloadUrl) {
+  async getVideoStreamByteUrl(id) {
     return this.fetcher({
-      url: downloadUrl,
+      url: `https://api.ring.com/clients_api/dings/${id}/share/download_status`
+        + '?disable_redirect=true',
       method: 'GET',
     }).then(res => get(res, 'data.url')).catch((err) => {
       throw err;
@@ -328,7 +318,7 @@ export default class SaveHistoryJob {
       if (isEventMetaDone(p)) return p;
 
       let isFailed = false;
-      const videoStreamByteUrl = await this.getVideoStreamByteUrl(p.downloadUrl).catch(() => {
+      const videoStreamByteUrl = await this.getVideoStreamByteUrl(p.id).catch(() => {
         isFailed = true;
       });
       return {
@@ -368,17 +358,14 @@ export default class SaveHistoryJob {
         history = await findEvent();
         isVideoReady = get(history, 'recording.status') === 'ready';
       }
-      const downloadUrl = `https://api.ring.com/clients_api/dings/${history.id}/share/download_status`
-        + '?disable_redirect=true';
-      const videoStreamByteUrl = await this.getVideoStreamByteUrl(downloadUrl);
       const dir = get(history, 'doorbot.description', 'Unnamed Device');
       const dirPath = path.join(this.downloadLocation, dir);
       const fileName = `${moment(history.created_at).format('YYYY-MM-DD_HH-mm-ss')}_${history.kind}`;
       const filePath = path.join(dirPath, fileName);
       const isDownloaded = downloadedFiles.indexOf(filePath) !== -1;
+      const videoStreamByteUrl = isDownloaded || !isVideoReady ? '' : await this.getVideoStreamByteUrl(history.id);
       return {
         ...history,
-        downloadUrl,
         videoStreamByteUrl,
         dir,
         dirPath,

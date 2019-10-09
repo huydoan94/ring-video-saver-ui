@@ -3,7 +3,7 @@ import { shape, func, string } from 'prop-types';
 import {
   Layout, Typography, Icon, Button,
 } from 'antd';
-import { debounce } from 'lodash';
+import { debounce, map } from 'lodash';
 import cx from 'classnames';
 
 import SideMenu, { menus } from './dashboard/SideMenu';
@@ -20,7 +20,6 @@ const menuComponents = {
 function Dashboard({ history, paths }) {
   const [currentPage, setCurrentPage] = useState(menus.jobManagement);
   const [isCollapseMenu, setIsCollapseMenu] = useState(true);
-  const MenuComponent = menuComponents[currentPage];
 
   const onScreenResize = debounce(() => {
     if (window.innerWidth <= 768) {
@@ -66,7 +65,11 @@ function Dashboard({ history, paths }) {
         </Button>
       </Layout.Sider>
       <Layout.Content>
-        <MenuComponent />
+        {map(menuComponents, (MenuComponent, key) => (
+          <div key={key} style={key === currentPage ? { height: '100%' } : { display: 'none', height: '100%' }}>
+            <MenuComponent />
+          </div>
+        ))}
       </Layout.Content>
     </Layout>
   );

@@ -13,7 +13,7 @@ import { electron } from '../../utils/electron';
 import userstorage from '../../utils/userstorage';
 import { DEFAULT_HOME_DIR } from '../../constants';
 
-import VideoSaveRunner from '../../VideoSaveRunner';
+import VideoSaveRunner from './JobManagement.runner';
 import styles from './JobManagement.module.scss';
 
 const dateFormat = 'MMM DD, YYYY';

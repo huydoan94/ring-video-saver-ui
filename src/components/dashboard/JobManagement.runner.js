@@ -10,18 +10,18 @@ import {
 import JSONBigInt from 'json-bigint';
 import autoBind from 'auto-bind';
 
-import { API_VERSION } from './constants';
-import getHardwareId from './utils/getHardwareId';
-import sleep from './utils/sleep';
-import promiseFetchWithRetry from './utils/promiseFetchWithRetry';
-import promiseAllWithLimit from './utils/promiseAllWithLimit';
-import promiseMap from './utils/promiseMap';
-import { electronImport } from './utils/electron';
-import CancellablePromise from './utils/cancellablePromise';
-import createDirs from './utils/createDirs';
-import userstorage from './utils/userstorage';
-import readFilesInDir from './utils/readFilesInDir';
-import { loginUseToken, createSession } from './components/Login.services';
+import { API_VERSION } from '../../constants';
+import getHardwareId from '../../utils/getHardwareId';
+import sleep from '../../utils/sleep';
+import promiseFetchWithRetry from '../../utils/promiseFetchWithRetry';
+import promiseAllWithLimit from '../../utils/promiseAllWithLimit';
+import promiseMap from '../../utils/promiseMap';
+import { electronImport } from '../../utils/electron';
+import CancellablePromise from '../../utils/cancellablePromise';
+import createDirs from '../../utils/createDirs';
+import userstorage from '../../utils/userstorage';
+import readFilesInDir from '../../utils/readFilesInDir';
+import { loginUseToken, createSession } from '../Login.services';
 
 const fs = electronImport('fs');
 const path = electronImport('path');
